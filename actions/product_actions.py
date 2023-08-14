@@ -18,6 +18,13 @@ class ProductActions(Actions):
 
     @Actions.check_permission(permission_class=PermissionAdmin)
     async def create_product(self, message: dict, session: AsyncSession, username: str) -> Product:
+        """
+        This method for create a product and check user's permissions
+        :param message: dict
+        :param session: AsyncSession
+        :param username: str - needs for checking user's permissions
+        :return: Product
+        """
         async with session.begin():
             product_dal = ProductDAL(session=session)
             new_product = await product_dal.create_product(message=message)
