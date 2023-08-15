@@ -1,20 +1,22 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from actions.actions import Actions
-from actions.pagination import ProductPagination
+from actions.product_actions.pagination import ProductPagination
 from database.dals import ProductDAL
 from database.models import Product
 from permissions.product_permissions import PermissionAdmin
+from serializers.products_serializer import ProductSerializer
 
 
 class ProductActions(Actions):
     pagination_class = ProductPagination
+    serializer_class = ProductSerializer
 
-    async def show_products(self, session: AsyncSession) -> list[Product]:
+    async def show_products(self, session: AsyncSession) -> list[list[dict]]:
         async with session.begin():
             product_dal = ProductDAL(session=session)
             products = await product_dal.get_all_products()
-            return await self.paginated_objects(products)
+            return await self.paginated_objects(await self.serialize(products))
 
     @Actions.check_permission(permission_class=PermissionAdmin)
     async def create_product(self, message: dict, session: AsyncSession, username: str) -> Product:

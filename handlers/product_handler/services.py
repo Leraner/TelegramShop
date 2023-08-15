@@ -9,31 +9,30 @@ from loader import redis_cache
 
 
 class ProductPages:
-    def __init__(self, products: list = None):
-        self.products = products
-
-    async def clear_useless_messages(self, request_forms: dict, data: dict):
+    @classmethod
+    async def _clear_useless_messages(cls, request_forms: dict, data: dict) -> list:
         messages_for_delete = set(request_forms['delete'])
         return [item for item in data['messages'] if item not in messages_for_delete]
 
-    async def form_post_data(self, product: Product, request_forms: dict, message: int = None,
-                             type_post: str = 'post') -> dict:
+    @classmethod
+    async def _form_post_data(cls, product: Product, request_forms: dict, message: int = None,
+                              type_post: str = 'post') -> dict:
         caption = f"""
-             <b>{product.name}</b>
-             {product.description}
+             <b>{product['name']}</b>
+             {product['description']}
         """
 
         if type_post == 'post':
             post_data = {
                 'media': InputMediaPhoto(
-                    open(product.image_path, 'rb'),
+                    open(product['image_path'], 'rb'),
                     caption=caption, parse_mode='HTML'
                 ),
                 'message_id': message
             }
         else:
             post_data = {
-                'photo': open(f'{product.image_path}', 'rb'),
+                'photo': open(f"{product['image_path']}", 'rb'),
                 'caption': caption,
                 'parse_mode': 'HTML'
             }
@@ -41,10 +40,12 @@ class ProductPages:
         request_forms[f'{type_post}'].append(post_data)
         return request_forms
 
-    async def get_next_page(self, username: str) -> Optional[dict]:
-        data = json.loads(await redis_cache.get(username))
+    @classmethod
+    async def get_next_page(cls, username: str, cache_key: str) -> Optional[dict]:
+        data = json.loads(await redis_cache.get(username + cache_key))
+        products = data['products']
 
-        if not (data['current_page'] < len(self.products) - 1):
+        if not (data['current_page'] < len(products) - 1):
             return None
 
         data['current_page'] += 1
@@ -55,11 +56,11 @@ class ProductPages:
 
         for message, product in zip_longest(
                 data['messages'],
-                self.products[data['current_page']],
+                products[data['current_page']],
                 fillvalue=None
         ):
             if product is not None:
-                request_forms = await self.form_post_data(
+                request_forms = await cls._form_post_data(
                     product=product,
                     request_forms=request_forms,
                     message=message
@@ -67,7 +68,7 @@ class ProductPages:
             else:
                 request_forms['delete'].append(message)
 
-        data['messages'] = await self.clear_useless_messages(
+        data['messages'] = await cls._clear_useless_messages(
             request_forms=request_forms,
             data=data
         )
@@ -75,8 +76,10 @@ class ProductPages:
 
         return request_forms
 
-    async def get_previous_page(self, username: str) -> Optional[dict]:
-        data = json.loads(await redis_cache.get(username))
+    @classmethod
+    async def get_previous_page(cls, username: str, cache_key: str) -> Optional[dict]:
+        data = json.loads(await redis_cache.get(username + cache_key))
+        products = data['products']
 
         if not (data['current_page'] > 0):
             return None
@@ -89,17 +92,17 @@ class ProductPages:
 
         for message, product in zip_longest(
                 data['messages'],
-                self.products[data['current_page']],
+                products[data['current_page']],
                 fillvalue=None
         ):
             if message is not None:
-                request_forms = await self.form_post_data(
+                request_forms = await cls._form_post_data(
                     product=product,
                     request_forms=request_forms,
                     message=message
                 )
             else:
-                request_forms = await self.form_post_data(
+                request_forms = await cls._form_post_data(
                     product=product,
                     request_forms=request_forms,
                     type_post='create'

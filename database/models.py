@@ -9,7 +9,7 @@ class Base(DeclarativeBase):
 
 
 """
-Create basket
+Create basket_handler
 Create categories
 Implement message deletion after action
 """
