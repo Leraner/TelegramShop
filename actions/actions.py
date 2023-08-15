@@ -1,9 +1,10 @@
-from actions.user_actions import UserActions
+from actions.user_actions.user_actions import UserActions
 from exceptions.exceptions import PermissionDenied
 
 
 class Actions:
     pagination_class = None
+    serializer_class = None
 
     @staticmethod
     def check_permission(permission_class):
@@ -20,6 +21,15 @@ class Actions:
             return wrapper
 
         return bar
+
+    @classmethod
+    async def serialize(cls, objects):
+        if cls.serializer_class is None:
+            raise Exception('You did not specify serializer class')
+        new_objects_list = []
+        for object in objects:
+            new_objects_list.append(cls.serializer_class(**object.__dict__).dict())
+        return new_objects_list
 
     @classmethod
     def paginate(cls, objects) -> list:

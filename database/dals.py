@@ -24,12 +24,20 @@ class BasketDAL:
         logging.info(f'ADDED {product} INTO {basket}')
         return basket
 
+    async def get_user_basket(self, user_id: int) -> list[Product]:
+        query = select(Basket).where(Basket.user_id == user_id)
+        result = await self.session.execute(query)
+        products = result.fetchone()
+        if products is not None:
+            return products[0].products
+
 
 class UserDAL:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def add_user(self, message: dict, basket) -> User:
+    async def add_user(self, message: dict) -> User:
+        basket = await BasketDAL.create_basket()
         new_user = User(
             username=message['chat'].get('username'),
             first_name=message['chat'].get('first_name'),

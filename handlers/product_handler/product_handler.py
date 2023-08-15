@@ -6,29 +6,13 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import ContentType
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from actions.basket_actions import BasketActions
-from actions.user_actions import UserActions
 from exceptions.exceptions import PermissionDenied
-from handlers.services import ProductPages
-from handlers.states import ProductState
+from handlers.product_handler.services import ProductPages
 from keyboards.inline_keyboard import InlineKeyboard
 from loader import dp, product_actions, redis_cache
+from state.states import ProductState
 
-products_pages = ProductPages()
-
-
-@dp.message_handler(commands=['start'])
-async def start_command(message: types.Message, session: AsyncSession) -> None:
-    bot_data = await dp.bot.get_me()
-    new_user = await UserActions.create_new_user(message=message, session=session)
-    await message.answer(f'Hello, {new_user.first_name}, welcome to {bot_data["username"]}')
-
-
-@dp.message_handler(commands=['test'])
-async def test(message: types.Message, session: AsyncSession) -> None:
-    user = await UserActions.get_user_by_username(username=message.from_user.username, session=session)
-    product = await product_actions.get_product_by_id(product_id=1, session=session)
-    new_user = await BasketActions.add_product_to_user_basket(user=user, product=product, session=session)
+CACHE_KEY = ':products'
 
 
 @dp.message_handler(commands=['create_product'])
@@ -91,21 +75,21 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
 @dp.message_handler(commands=['show_products'])
 async def show_all_products(message: types.Message, session: AsyncSession) -> None:
     all_products = await product_actions.show_products(session=session)
-    products_pages.products = all_products
 
     json_data = {
         'messages': [],
         'tab_message': None,
-        'current_page': 0
+        'current_page': 0,
+        'products': all_products
     }
 
     for product in all_products[0]:
         caption = f"""
-             <b>{product.name}</b>
-             {product.description}
+             <b>{product['name']}</b>
+             {product['description']}
         """
         product_message = await message.answer_photo(
-            open(f'{product.image_path}', 'rb'),
+            open(f"{product['image_path']}", 'rb'),
             caption=caption,
             parse_mode='HTML'
         )
@@ -116,13 +100,14 @@ async def show_all_products(message: types.Message, session: AsyncSession) -> No
         reply_markup=await InlineKeyboard.generate_keyboard(1, len(all_products))
     )
     json_data['tab_message'] = tab_message.message_id
-    await redis_cache.set(message.from_user.username, json.dumps(json_data))
+    await redis_cache.set(message.from_user.username + CACHE_KEY, json.dumps(json_data, default=str))
 
 
 @dp.callback_query_handler(text=['<'])
 async def left(call: types.CallbackQuery) -> None:
     current_page, pages = call.message.reply_markup.inline_keyboard[0][1].text.split('/')
-    products_previous_page = await products_pages.get_previous_page(username=call.from_user.username)
+    products_previous_page = await ProductPages.get_previous_page(username=call.from_user.username,
+                                                                  cache_key=CACHE_KEY)
 
     if products_previous_page is None:
         return
@@ -150,13 +135,14 @@ async def left(call: types.CallbackQuery) -> None:
         )
 
     data['tab_message'] = tab_message.message_id
-    await redis_cache.set(call.from_user.username, json.dumps(data))
+    await redis_cache.set(call.from_user.username + CACHE_KEY, json.dumps(data))
 
 
 @dp.callback_query_handler(text=['>'])
 async def right(call: types.CallbackQuery) -> None:
     current_page, pages = call.message.reply_markup.inline_keyboard[0][1].text.split('/')
-    products_next_page = await products_pages.get_next_page(username=call.from_user.username)
+    products_next_page = await ProductPages.get_next_page(username=call.from_user.username,
+                                                          cache_key=CACHE_KEY)
 
     if products_next_page is None:
         return
@@ -172,4 +158,4 @@ async def right(call: types.CallbackQuery) -> None:
 
     data = products_next_page['data']
     data['tab_message'] = tab_message.message_id
-    await redis_cache.set(call.from_user.username, json.dumps(data))
+    await redis_cache.set(call.from_user.username + CACHE_KEY, json.dumps(data))
