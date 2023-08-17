@@ -29,6 +29,14 @@ class BasketActions(Actions):
             user.basket = new_basket_with_products
             return user
 
+    @staticmethod
+    async def remove_product_from_basket(user: User, product: Product, session: AsyncSession) -> User:
+        async with session.begin():
+            basket_dal = BasketDAL(session=session)
+            new_basket_without_product = await basket_dal.remove_product_from_basket(user=user, product=product)
+            user.basket = new_basket_without_product
+            return user
+
     async def get_user_basket(self, user_id: int, session: AsyncSession) -> Optional[list[list[dict]]]:
         async with session.begin():
             basket_dal = BasketDAL(session=session)

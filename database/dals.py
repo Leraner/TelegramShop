@@ -16,6 +16,14 @@ class BasketDAL:
         new_basket = Basket()
         return new_basket
 
+    async def remove_product_from_basket(self, user: User, product: Product) -> Basket:
+        basket = user.basket
+        basket.products.remove(product)
+        self.session.add(basket)
+        await self.session.flush()
+        logging.info(f'REMOVED {product} FROM {basket}')
+        return basket
+
     async def add_product_to_basket(self, user: User, product: Product) -> Basket:
         basket = user.basket
         basket.products.append(product)

@@ -3,19 +3,13 @@ import json
 from aiogram import types
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from actions.basket_actions.basket_actions import BasketActions
 from actions.user_actions.user_actions import UserActions
 from handlers.product_handler.services import ProductPages
-from keyboards.inline_keyboard import InlineKeyboard
-from loader import dp, basket_actions, redis_cache
+from keyboards.inline_keyboard import InlineKeyboard, callback_data_add_to_basket_or_delete
+from loader import dp, basket_actions, redis_cache, product_actions
 
 CACHE_KEY = ':basket'
-
-
-# @dp.message_handler(commands=['test'])
-# async def test(message: types.Message, session: AsyncSession) -> None:
-#     user = await UserActions.get_user_by_username(username=message.from_user.username, session=session)
-#     product = await product_actions.get_product_by_id(product_id=6, session=session)
-#     new_user = await BasketActions.add_product_to_user_basket(user=user, product=product, session=session)
 
 
 @dp.message_handler(commands=['basket'])
@@ -42,24 +36,48 @@ async def show_user_basket(message: types.Message, session: AsyncSession) -> Non
         product_message = await message.answer_photo(
             open(f"{product['image_path']}", 'rb'),
             caption=caption,
-            parse_mode='HTML'
+            parse_mode='HTML',
+            reply_markup=await InlineKeyboard.generate_add_to_basket_or_delete_reply_markup(
+                product_id=product['product_id'], delete_or_add='delete'
+            )
         )
         json_data['messages'].append(product_message.message_id)
 
     tab_message = await message.answer(
         'Переключалка',
-        reply_markup=await InlineKeyboard.generate_keyboard(1, len(user_basket_products))
+        reply_markup=await InlineKeyboard.generate_switcher_reply_markup(
+            current_page=1,
+            pages=len(user_basket_products),
+            callback_data=('basket_left', 'basket_right')
+        )
     )
     json_data['tab_message'] = tab_message.message_id
 
-    await redis_cache.set(message.from_user.username + CACHE_KEY, json.dumps(json_data, default=str))
+    await redis_cache.set(
+        message.from_user.username + CACHE_KEY,
+        json.dumps(json_data, default=str)
+    )
 
 
-@dp.callback_query_handler(text=['<'])
-async def left(call: types.CallbackQuery) -> None:
+@dp.callback_query_handler(callback_data_add_to_basket_or_delete.filter(action='remove_product_from_basket'))
+async def remove_product_from_basket(call: types.CallbackQuery, callback_data: dict, session: AsyncSession) -> None:
+    user = await UserActions.get_user_by_username(username=call.from_user.username, session=session)
+    product = await product_actions.get_product_by_id(product_id=int(callback_data['product_id']), session=session)
+    if not (product in user.basket.products):
+        await dp.bot.send_message(chat_id=call.message.chat.id, text='Такого товара уже нет в вашей корзине')
+    else:
+        new_user = await BasketActions.remove_product_from_basket(user=user, product=product, session=session)
+        await dp.bot.send_message(chat_id=call.message.chat.id, text='Товар удален из корзины')
+
+
+@dp.callback_query_handler(text=['basket_left'])
+async def basket_left(call: types.CallbackQuery) -> None:
     current_page, pages = call.message.reply_markup.inline_keyboard[0][1].text.split('/')
-    products_previous_page = await ProductPages.get_previous_page(username=call.from_user.username,
-                                                                  cache_key=CACHE_KEY)
+    products_previous_page = await ProductPages.get_previous_page(
+        username=call.from_user.username,
+        cache_key=CACHE_KEY,
+        delete_or_add='delete'
+    )
 
     if products_previous_page is None:
         return
@@ -67,10 +85,13 @@ async def left(call: types.CallbackQuery) -> None:
     data = products_previous_page['data']
 
     if len(products_previous_page['create']) > 0:
-        await dp.bot.delete_message(chat_id=call.message.chat.id, message_id=data['tab_message'])
+        await dp.bot.delete_message(
+            chat_id=call.message.chat.id, message_id=data['tab_message']
+        )
 
     for form in products_previous_page['post']:
         await dp.bot.edit_message_media(chat_id=call.message.chat.id, **form)
+
     for form in products_previous_page['create']:
         new_message = await dp.bot.send_photo(chat_id=call.message.chat.id, **form)
         data['messages'].append(new_message.message_id)
@@ -79,33 +100,43 @@ async def left(call: types.CallbackQuery) -> None:
         tab_message = await dp.bot.send_message(
             chat_id=call.message.chat.id,
             text='Переключалка',
-            reply_markup=await InlineKeyboard.generate_keyboard(int(current_page) - 1, pages)
+            reply_markup=await InlineKeyboard.generate_switcher_reply_markup(
+                int(current_page) - 1, pages, callback_data=('basket_left', 'basket_right')
+            )
         )
     else:
         tab_message = await call.message.edit_reply_markup(
-            await InlineKeyboard.generate_keyboard(int(current_page) - 1, pages)
+            await InlineKeyboard.generate_switcher_reply_markup(
+                int(current_page) - 1, pages, callback_data=('basket_left', 'basket_right')
+            )
         )
 
     data['tab_message'] = tab_message.message_id
     await redis_cache.set(call.from_user.username + CACHE_KEY, json.dumps(data))
 
 
-@dp.callback_query_handler(text=['>'])
-async def right(call: types.CallbackQuery) -> None:
+@dp.callback_query_handler(text=['basket_right'])
+async def basket_right(call: types.CallbackQuery) -> None:
     current_page, pages = call.message.reply_markup.inline_keyboard[0][1].text.split('/')
-    products_next_page = await ProductPages.get_next_page(username=call.from_user.username,
-                                                          cache_key=CACHE_KEY)
+    products_next_page = await ProductPages.get_next_page(
+        username=call.from_user.username,
+        cache_key=CACHE_KEY,
+        delete_or_add='delete'
+    )
 
     if products_next_page is None:
         return
 
     for form in products_next_page['post']:
         await dp.bot.edit_message_media(chat_id=call.message.chat.id, **form)
+
     for message in products_next_page['delete']:
         await dp.bot.delete_message(chat_id=call.message.chat.id, message_id=message)
 
     tab_message = await call.message.edit_reply_markup(
-        await InlineKeyboard.generate_keyboard(int(current_page) + 1, pages)
+        await InlineKeyboard.generate_switcher_reply_markup(
+            int(current_page) + 1, pages, callback_data=('basket_left', 'basket_right')
+        )
     )
 
     data = products_next_page['data']
