@@ -1,3 +1,2 @@
 class ProductPagination:
-    max_items = 5
-
+    max_items = 2

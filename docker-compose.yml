@@ -8,3 +8,10 @@ services:
       - 5432:5432
     env_file:
       - .env
+
+  redis:
+    image: redis
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - 6379:6379

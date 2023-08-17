@@ -1,11 +1,13 @@
 import logging
 
 from aiogram import Bot, Dispatcher
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.contrib.fsm_storage.redis import RedisStorage2
+from aioredis import Redis
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 import config
-from actions.product_actions import ProductActions
+from actions.basket_actions.basket_actions import BasketActions
+from actions.product_actions.product_actions import ProductActions
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,9 +22,10 @@ async_sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
 
 # AIOGRAM BOT
 bot = Bot(token=config.API_TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)
+dp = Dispatcher(bot, storage=RedisStorage2())
+redis_cache = Redis(decode_responses=True, db=1)
 
 # ---------------------------------------------------------------------------
 
 product_actions = ProductActions()
+basket_actions = BasketActions()
