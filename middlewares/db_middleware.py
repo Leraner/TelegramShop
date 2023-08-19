@@ -58,10 +58,12 @@ class DbMiddleware(BaseMiddleware):
                 await dp.bot.delete_message(chat_id=msg.chat.id, message_id=message)
 
     async def on_process_message(self, msg: Message, data: dict) -> None:
-        if msg.text[0] == '/':
-            await self.delete_useless_messages(msg)
+        if msg.text is not None:
+            if msg.text[0] == '/':
+                await self.delete_useless_messages(msg)
 
-        await redis_cache.set(msg.from_user.username + ':useless_messages', json.dumps([msg.message_id]))
+        if data['raw_state'] is None:
+            await redis_cache.set(msg.from_user.username + ':useless_messages', json.dumps([msg.message_id]))
 
         async with self.session_pool() as session:
             data['session'] = session
