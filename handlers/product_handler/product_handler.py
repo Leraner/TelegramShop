@@ -19,23 +19,32 @@ CACHE_KEY = ':product'
 
 @dp.message_handler(commands=['create_product'])
 async def create_product(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
-    await message.answer('Напишите название продукта')
+    msg = await message.answer('Напишите название продукта')
+    useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
+    useless_messages.append(msg.message_id)
+    await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
     await state.set_state(ProductState.START_CREATION)
 
 
 @dp.message_handler(state=ProductState.START_CREATION)
 async def create_product_get_name(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
-    msg = message.text
-    await state.update_data(NAME=msg)
-    await message.answer('Напишите описание к продукту')
+    product_name = message.text
+    await state.update_data(NAME=product_name)
+    msg = await message.answer('Напишите описание к продукту')
+    useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
+    useless_messages.extend([msg.message_id, message.message_id])
+    await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
     await state.set_state(ProductState.DESCRIPTION)
 
 
 @dp.message_handler(state=ProductState.DESCRIPTION)
 async def create_product_get_image(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
-    msg = message.text
-    await state.update_data(DESCRIPTION=msg)
-    await message.answer('Пришлите изображение продукта')
+    product_description = message.text
+    await state.update_data(DESCRIPTION=product_description)
+    msg = await message.answer('Пришлите изображение продукта')
+    useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
+    useless_messages.extend([msg.message_id, message.message_id])
+    await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
     await state.set_state(ProductState.IMAGE_PATH)
 
 
@@ -61,16 +70,19 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
     except PermissionDenied as error:
         await message.answer(error.message)
     else:
-        await message.answer('Продукт успешно создан')
+        msg1 = await message.answer('Продукт успешно создан')
         caption = f"""
             <b>{new_product.name}</b>
             {new_product.description}
         """
-        await message.answer_photo(
+        msg2 = await message.answer_photo(
             open(f'{new_product.image_path}', 'rb'),
             caption=caption,
             parse_mode='HTML'
         )
+        useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
+        useless_messages.extend([msg1.message_id, msg2.message_id, message.message_id])
+        await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
     await state.finish()
 
 

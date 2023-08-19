@@ -8,12 +8,6 @@ class Base(DeclarativeBase):
     pass
 
 
-"""
-Create basket_handler
-Create categories
-Implement message deletion after action
-"""
-
 association_basket_table = Table(
     'association_table',
     Base.metadata,
