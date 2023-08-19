@@ -3,13 +3,10 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from actions.actions import Actions
+from actions.basket_actions.pagination import BasketPagination
 from database.dals import BasketDAL
 from database.models import Basket, Product, User
 from serializers.basket_serializer import BasketProductsSerializer
-
-
-class BasketPagination:
-    max_items = 2
 
 
 class BasketActions(Actions):
