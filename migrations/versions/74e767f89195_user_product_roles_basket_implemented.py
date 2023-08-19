@@ -1,8 +1,8 @@
-"""initial
+"""user_product_roles_basket implemented
 
-Revision ID: 56f8e106faaa
-Revises: 
-Create Date: 2023-08-19 00:24:43.729095
+Revision ID: 74e767f89195
+Revises: 5cf44095c35e
+Create Date: 2023-08-12 16:45:00.057830
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '56f8e106faaa'
-down_revision = None
+revision = '74e767f89195'
+down_revision = '5cf44095c35e'
 branch_labels = None
 depends_on = None
 
