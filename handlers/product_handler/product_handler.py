@@ -52,7 +52,8 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
 async def create_product_get_image(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
     photo = message.photo[1]
     date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-    path = f'media/products_images/{date}/{date}.png'
+    date_file_name = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    path = f'media/products_images/{date}/{date_file_name}.png'
     await photo.download(destination_file=path)
 
     product_state_data = await state.get_data()
