@@ -95,7 +95,6 @@ async def add_product_to_basket(call: types.CallbackQuery, callback_data: dict, 
         await call.answer(text='🥵Товар уже есть в корзине', show_alert=True)
     else:
         new_user = await BasketActions.add_product_to_user_basket(user=user, product=product, session=session)
-        msg = await dp.bot.send_message(chat_id=call.message.chat.id, text='Товар добавлен в корзину')
         await call.answer(text='✅Товар добавлен в корзину', show_alert=True)
 
 
