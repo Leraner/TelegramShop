@@ -67,16 +67,10 @@ async def remove_product_from_basket(call: types.CallbackQuery, callback_data: d
     user = await UserActions.get_user_by_username(username=call.from_user.username, session=session)
     product = await product_actions.get_product_by_id(product_id=int(callback_data['product_id']), session=session)
     if not (product in user.basket.products):
-        msg = await dp.bot.send_message(chat_id=call.message.chat.id, text='Такого товара уже нет в вашей корзине')
-        useless_messages = json.loads(await redis_cache.get(call.from_user.username + ':useless_messages'))
-        useless_messages.append(msg.message_id)
-        await redis_cache.set(call.from_user.username + ':useless_messages', json.dumps(useless_messages))
+        await call.answer(text='🥵Такого товара уже нет в вашей корзине', show_alert=True)
     else:
         new_user = await BasketActions.remove_product_from_basket(user=user, product=product, session=session)
-        msg = await dp.bot.send_message(chat_id=call.message.chat.id, text='Товар удален из корзины')
-        useless_messages = json.loads(await redis_cache.get(call.from_user.username + ':useless_messages'))
-        useless_messages.append(msg.message_id)
-        await redis_cache.set(call.from_user.username + ':useless_messages', json.dumps(useless_messages))
+        await call.answer(text='✅Товар удален из корзины', show_alert=True)
 
 
 @dp.callback_query_handler(text=['basket_left'])
