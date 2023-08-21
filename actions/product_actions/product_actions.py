@@ -9,10 +9,11 @@ from serializers.products_serializer import ProductSerializer
 
 
 class ProductActions(Actions):
+    """Product actions class"""
     pagination_class = ProductPagination
     serializer_class = ProductSerializer
 
-    async def show_products(self, session: AsyncSession) -> list[list[dict]]:
+    async def get_products(self, session: AsyncSession) -> list[list[dict]]:
         async with session.begin():
             product_dal = ProductDAL(session=session)
             products = await product_dal.get_all_products()
@@ -22,10 +23,7 @@ class ProductActions(Actions):
     async def create_product(self, message: dict, session: AsyncSession, username: str) -> Product:
         """
         This method for create a product and check user's permissions
-        :param message: dict
-        :param session: AsyncSession
-        :param username: str - needs for checking user's permissions
-        :return: Product
+        username - (string) - needs for checking user's permissions
         """
         async with session.begin():
             product_dal = ProductDAL(session=session)

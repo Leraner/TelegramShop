@@ -8,6 +8,11 @@ from loader import dp
 
 @dp.message_handler(commands=['start'])
 async def start_command(message: types.Message, session: AsyncSession) -> None:
+    """
+    User start command
+
+    If user is admin, command will add additional buttons for user
+    """
     bot_data = await dp.bot.get_me()
     user = await UserActions.get_user_by_username(username=message.from_user.username, session=session)
     if not user:

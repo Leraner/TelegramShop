@@ -5,6 +5,7 @@ from exceptions.exceptions import PermissionDenied, SerializerValidationError
 
 
 class Actions:
+    """Base Action class"""
     pagination_class = None
     serializer_class = None
 

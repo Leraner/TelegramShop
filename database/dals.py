@@ -8,6 +8,7 @@ from database.models import User, Product, Basket
 
 
 class BasketDAL:
+    """Data Access Layer for operating basket info"""
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -41,6 +42,7 @@ class BasketDAL:
 
 
 class UserDAL:
+    """Data Access Layer for operating user info"""
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -68,6 +70,7 @@ class UserDAL:
 
 
 class ProductDAL:
+    """Data Access Layer for operating product info"""
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
