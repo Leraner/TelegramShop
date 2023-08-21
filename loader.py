@@ -1,5 +1,6 @@
 import logging
 
+import sentry_sdk
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.redis import RedisStorage2
 from aioredis import Redis
@@ -25,7 +26,14 @@ async_sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
 bot = Bot(token=config.API_TOKEN)
 dp = Dispatcher(bot, storage=RedisStorage2())
 redis_cache = Redis(decode_responses=True, db=1)
+sentry_sdk.init(
+    dsn=config.DSN,
 
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate=1.0
+)
 # ---------------------------------ACTIONS------------------------------------------
 product_actions = ProductActions()
 basket_actions = BasketActions()
