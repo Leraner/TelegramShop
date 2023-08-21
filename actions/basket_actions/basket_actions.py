@@ -10,6 +10,7 @@ from serializers.basket_serializer import BasketProductsSerializer
 
 
 class BasketActions(Actions):
+    """Basket actions class"""
     pagination_class = BasketPagination
     serializer_class = BasketProductsSerializer
 

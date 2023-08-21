@@ -8,6 +8,7 @@ class Base(DeclarativeBase):
     pass
 
 
+# Association table for "many to many" relationships basket and product
 association_basket_table = Table(
     'association_table',
     Base.metadata,
@@ -17,6 +18,7 @@ association_basket_table = Table(
 
 
 class Basket(Base):
+    """Basket model"""
     __tablename__ = 'Basket'
 
     basket_id = Column(Integer, primary_key=True)
@@ -28,6 +30,7 @@ class Basket(Base):
 
 
 class User(Base):
+    """User model"""
     __tablename__ = 'User'
 
     user_id = Column(Integer, primary_key=True)
@@ -42,6 +45,7 @@ class User(Base):
 
 
 class Product(Base):
+    """Product model"""
     __tablename__ = 'Product'
 
     product_id = Column(Integer, primary_key=True)

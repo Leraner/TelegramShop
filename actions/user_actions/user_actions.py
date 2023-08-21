@@ -6,6 +6,7 @@ from database.models import User
 
 
 class UserActions:
+    """User actions class"""
     @staticmethod
     async def create_new_user(message: types.Message, session: AsyncSession) -> User:
         async with session.begin():

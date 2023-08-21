@@ -5,9 +5,11 @@ callback_data_add_to_basket_or_delete = CallbackData('product_to_basket', 'actio
 
 
 class InlineKeyboard:
+    """Class inlinekeboard generator"""
     @staticmethod
     async def generate_switcher_reply_markup(current_page: int, pages: int,
                                              callback_data: tuple[str, str]) -> InlineKeyboardMarkup:
+        """Generates a keyboard that switches pages"""
         markup = InlineKeyboardMarkup()
         ib1 = InlineKeyboardButton(
             text='<',
@@ -27,6 +29,12 @@ class InlineKeyboard:
     @staticmethod
     async def generate_add_to_basket_or_delete_reply_markup(product_id: int,
                                                             delete_or_add: str) -> InlineKeyboardMarkup:
+        """
+        Generates buttons for removing and adding products to basket
+
+        product_id - (int) - id of product which will add or remove from basket
+        delete_or_add - (string) - param which say what buttons to create (for adding or for removing)
+        """
         markup = InlineKeyboardMarkup()
         if delete_or_add == 'add':
             ib1 = InlineKeyboardButton(
@@ -47,6 +55,11 @@ class InlineKeyboard:
 
     @staticmethod
     async def generate_reply_keyboard_markup(user_is_admin: bool = False) -> ReplyKeyboardMarkup:
+        """
+        Generate buttons that helps the user send commands
+
+        user_is_admin - (bool) - if true, add additional buttons
+        """
         markup = ReplyKeyboardMarkup()
         btn1 = KeyboardButton(text='/basket')
         btn2 = KeyboardButton(text='/show_products')

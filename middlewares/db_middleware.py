@@ -8,11 +8,12 @@ from loader import redis_cache, dp
 
 
 class DbMiddleware(BaseMiddleware):
-    def __init__(self, session_pool: async_sessionmaker):
+    def __init__(self, session_pool: async_sessionmaker) -> None:
         super().__init__()
         self.session_pool = session_pool
 
     async def get_all_useless_messages(self, msg: Message) -> list:
+        """Return the messages that were sent during the all commands"""
         useless_messages = await redis_cache.get(msg.from_user.username + ':useless_messages')
         if useless_messages is not None:
             await redis_cache.set(msg.from_user.username + ':useless_messages', json.dumps([]))
@@ -20,6 +21,7 @@ class DbMiddleware(BaseMiddleware):
         return []
 
     async def get_all_useless_basket_messages(self, msg: Message) -> list:
+        """Return the messages with products that were sent during the /basket command"""
         basket_data = await redis_cache.get(msg.from_user.username + ':basket')
         if basket_data is not None:
             basket_data = json.loads(basket_data)
@@ -32,6 +34,7 @@ class DbMiddleware(BaseMiddleware):
         return []
 
     async def get_all_useless_product_messages(self, msg: Message) -> list:
+        """Return the messages with products that were sent during the /show_products command"""
         product_data = await redis_cache.get(msg.from_user.username + ':product')
         if product_data is not None:
             product_data = json.loads(product_data)
@@ -44,6 +47,7 @@ class DbMiddleware(BaseMiddleware):
         return []
 
     async def delete_useless_messages(self, msg: Message) -> None:
+        """Delete messages when user send another command"""
         useless_messages = await self.get_all_useless_messages(msg)
         useless_messages_basket = await self.get_all_useless_basket_messages(msg)
         useless_messages_product = await self.get_all_useless_product_messages(msg)
@@ -63,6 +67,7 @@ class DbMiddleware(BaseMiddleware):
                 await self.delete_useless_messages(msg)
 
         if data['raw_state'] is None:
+            # Add to redis cache message without state
             await redis_cache.set(msg.from_user.username + ':useless_messages', json.dumps([msg.message_id]))
 
         async with self.session_pool() as session:

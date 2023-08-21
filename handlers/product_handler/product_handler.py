@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from actions.basket_actions.basket_actions import BasketActions
 from actions.user_actions.user_actions import UserActions
 from exceptions.exceptions import PermissionDenied
-from handlers.product_handler.services import ProductPages
+from handlers.product_handler.services import Pages
 from keyboards.inline_keyboard import InlineKeyboard, callback_data_add_to_basket_or_delete
 from loader import dp, product_actions, redis_cache
 from state.states import ProductState
@@ -100,7 +100,7 @@ async def add_product_to_basket(call: types.CallbackQuery, callback_data: dict, 
 
 @dp.message_handler(commands=['show_products'])
 async def show_all_products(message: types.Message, session: AsyncSession) -> None:
-    all_products = await product_actions.show_products(session=session)
+    all_products = await product_actions.get_products(session=session)
 
     json_data = {
         'messages': [],
@@ -142,8 +142,9 @@ async def show_all_products(message: types.Message, session: AsyncSession) -> No
 
 @dp.callback_query_handler(text=['product_left'])
 async def product_left(call: types.CallbackQuery) -> None:
+    """Switch to the previous page"""
     current_page, pages = call.message.reply_markup.inline_keyboard[0][1].text.split('/')
-    products_previous_page = await ProductPages.get_previous_page(
+    products_previous_page = await Pages.get_previous_page(
         username=call.from_user.username,
         cache_key=CACHE_KEY,
         delete_or_add='add'
@@ -152,11 +153,11 @@ async def product_left(call: types.CallbackQuery) -> None:
     if products_previous_page is None:
         return
 
-    data = products_previous_page['data']
+    cache = products_previous_page.pop('cache')
 
     if len(products_previous_page['create']) > 0:
         await dp.bot.delete_message(
-            chat_id=call.message.chat.id, message_id=data['tab_message']
+            chat_id=call.message.chat.id, message_id=cache['tab_message']
         )
 
     for form in products_previous_page['post']:
@@ -164,7 +165,7 @@ async def product_left(call: types.CallbackQuery) -> None:
 
     for form in products_previous_page['create']:
         new_message = await dp.bot.send_photo(chat_id=call.message.chat.id, **form)
-        data['messages'].append(new_message.message_id)
+        cache['messages'].append(new_message.message_id)
 
     if len(products_previous_page['create']) > 0:
         tab_message = await dp.bot.send_message(
@@ -185,18 +186,21 @@ async def product_left(call: types.CallbackQuery) -> None:
             )
         )
 
-    data['tab_message'] = tab_message.message_id
-    await redis_cache.set(call.from_user.username + CACHE_KEY, json.dumps(data))
+    cache['tab_message'] = tab_message.message_id
+    await redis_cache.set(call.from_user.username + CACHE_KEY, json.dumps(cache))
 
 
 @dp.callback_query_handler(text=['product_right'])
 async def product_right(call: types.CallbackQuery) -> None:
+    """Switch to the next page"""
     current_page, pages = call.message.reply_markup.inline_keyboard[0][1].text.split('/')
-    products_next_page = await ProductPages.get_next_page(
+    products_next_page = await Pages.get_next_page(
         username=call.from_user.username,
         cache_key=CACHE_KEY,
         delete_or_add='add'
     )
+
+    cache = products_next_page.pop('cache')
 
     if products_next_page is None:
         return
@@ -215,6 +219,5 @@ async def product_right(call: types.CallbackQuery) -> None:
         )
     )
 
-    data = products_next_page['data']
-    data['tab_message'] = tab_message.message_id
-    await redis_cache.set(call.from_user.username + CACHE_KEY, json.dumps(data))
+    cache['tab_message'] = tab_message.message_id
+    await redis_cache.set(call.from_user.username + CACHE_KEY, json.dumps(cache))

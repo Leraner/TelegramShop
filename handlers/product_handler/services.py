@@ -2,22 +2,37 @@ import json
 from itertools import zip_longest
 from typing import Optional
 
-from aiogram.types import InputMediaPhoto
+from aiogram.types import InputMediaPhoto, InlineKeyboardMarkup
 
 from database.models import Product
 from keyboards.inline_keyboard import InlineKeyboard
 from loader import redis_cache
 
 
-class ProductPages:
-    @classmethod
-    async def _clear_useless_messages(cls, request_forms: dict, data: dict) -> list:
-        messages_for_delete = set(request_forms['delete'])
-        return [item for item in data['messages'] if item not in messages_for_delete]
+class Pages:
+    """Class for switching pages"""
 
     @classmethod
-    async def _form_post_data(cls, product: Product, request_forms: dict, reply_markup=None, message: int = None,
-                              type_post: str = 'post') -> dict:
+    async def _clear_useless_messages(cls, request_forms: dict, cache: dict) -> list:
+        """
+        Clear unused messages in the live user's information which will send in redis cache
+        """
+        messages_for_delete = set(request_forms['delete'])
+        return [item for item in cache['messages'] if item not in messages_for_delete]
+
+    @classmethod
+    async def _form_post_data(cls, product: Product, request_forms: dict, reply_markup: InlineKeyboardMarkup = None,
+                              message_id: int = None, type_post: str = 'post') -> dict:
+        """
+        Generate post data and request forms for switching pages
+
+        product - (Product) - product
+        request_forms - (dict) - {'post': ..., 'delete/create': ...},
+        'post' - editing existing messages, 'delete' - deleting unwanted messages, 'create' - adding missing messages
+        reply_markup - (InlineKeyboardMarkup, default=None) - buttons for adding or removing from basket
+        message_id - (int, default None) - message_id
+        type_post - (string, default 'post') - param which says editing or create new message with product
+        """
         caption = f"""
              <b>{product['name']}</b>
              {product['description']}
@@ -30,7 +45,7 @@ class ProductPages:
                     caption=caption,
                     parse_mode='HTML',
                 ),
-                'message_id': message,
+                'message_id': message_id,
                 'reply_markup': reply_markup
             }
         else:
@@ -46,66 +61,100 @@ class ProductPages:
 
     @classmethod
     async def get_next_page(cls, username: str, cache_key: str, delete_or_add: str) -> Optional[dict]:
-        data = json.loads(await redis_cache.get(username + cache_key))
-        products = data['products']
+        """
+        Get next page
 
-        if not (data['current_page'] < len(products) - 1):
+         username - (string) - user username
+         cache_key - (string) - key which uses for adding pages information into redis cache
+         delete_or_add - (string) - param which uses for generate buttons on removing or adding product into basket
+         :return
+         request_forms = {
+            'post': [
+                {...}, - product
+            ],
+            'delete': [
+                int, - message_ids for deleting
+            ],
+            'cache': dict - live information of user's products, current page, messages in the chat and e.t.c.
+         }
+        """
+        cache = json.loads(await redis_cache.get(username + cache_key))
+        products = cache['products']
+
+        if not (cache['current_page'] < len(products) - 1):
             return None
 
-        data['current_page'] += 1
+        cache['current_page'] += 1
         request_forms = {
             'post': [],
             'delete': []
         }
 
-        for message, product in zip_longest(
-                data['messages'],
-                products[data['current_page']],
+        for message_id, product in zip_longest(
+                cache['messages'],
+                products[cache['current_page']],
                 fillvalue=None
         ):
             if product is not None:
                 request_forms = await cls._form_post_data(
                     product=product,
                     request_forms=request_forms,
-                    message=message,
+                    message_id=message_id,
                     reply_markup=await InlineKeyboard.generate_add_to_basket_or_delete_reply_markup(
                         product_id=product['product_id'], delete_or_add=delete_or_add)
                 )
             else:
-                request_forms['delete'].append(message)
+                request_forms['delete'].append(message_id)
 
-        data['messages'] = await cls._clear_useless_messages(
+        cache['messages'] = await cls._clear_useless_messages(
             request_forms=request_forms,
-            data=data
+            cache=cache
         )
-        request_forms['data'] = data
+        request_forms['cache'] = cache
 
         return request_forms
 
     @classmethod
     async def get_previous_page(cls, username: str, cache_key: str, delete_or_add: str) -> Optional[dict]:
-        data = json.loads(await redis_cache.get(username + cache_key))
-        products = data['products']
+        """
+        Get previous page
 
-        if not (data['current_page'] > 0):
+         username - (string) - user username
+         cache_key - (string) - key which uses for adding pages information into redis cache
+         delete_or_add - (string) - param which uses for generate buttons on removing or adding product into basket
+         :return
+         request_forms = {
+            'post': [
+                {...}, - product
+            ],
+            'delete': [
+                int, - message_ids for deleting
+            ],
+            'cache': dict - live information of user's products, current page, messages in the chat and e.t.c.
+         }
+        """
+        cache = json.loads(await redis_cache.get(username + cache_key))
+        products = cache['products']
+
+        if not (cache['current_page'] > 0):
             return None
 
-        data['current_page'] -= 1
+        cache['current_page'] -= 1
         request_forms = {
             'post': [],
             'create': []
         }
 
-        for message, product in zip_longest(
-                data['messages'],
-                products[data['current_page']],
+        for message_id, product in zip_longest(
+                cache['messages'],
+                products[cache['current_page']],
                 fillvalue=None
         ):
-            if message is not None:
+            if message_id is not None:
                 request_forms = await cls._form_post_data(
                     product=product,
                     request_forms=request_forms,
-                    message=message,
+                    message_id=message_id,
                     reply_markup=await InlineKeyboard.generate_add_to_basket_or_delete_reply_markup(
                         product_id=product['product_id'], delete_or_add=delete_or_add)
                 )
@@ -118,5 +167,5 @@ class ProductPages:
                         product_id=product['product_id'], delete_or_add=delete_or_add)
                 )
 
-        request_forms['data'] = data
+        request_forms['cache'] = cache
         return request_forms
