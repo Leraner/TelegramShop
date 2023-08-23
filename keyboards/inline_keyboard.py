@@ -1,11 +1,16 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.callback_data import CallbackData
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from loader import category_actions
 
 callback_data_add_to_basket_or_delete = CallbackData('product_to_basket', 'action', 'product_id')
+callback_data_select_category_for_product = CallbackData('category_for_product', 'action', 'category_id')
 
 
 class InlineKeyboard:
     """Class inlinekeboard generator"""
+
     @staticmethod
     async def generate_switcher_reply_markup(current_page: int, pages: int,
                                              callback_data: tuple[str, str]) -> InlineKeyboardMarkup:
@@ -54,7 +59,7 @@ class InlineKeyboard:
         return markup
 
     @staticmethod
-    async def generate_reply_keyboard_markup(user_is_admin: bool = False) -> ReplyKeyboardMarkup:
+    async def generate_commands_reply_keyboard_markup(user_is_admin: bool = False) -> ReplyKeyboardMarkup:
         """
         Generate buttons that helps the user send commands
 
@@ -67,4 +72,21 @@ class InlineKeyboard:
             btn3 = KeyboardButton(text='/create_product')
             markup.add(btn3)
         markup.add(btn1, btn2)
+        return markup
+
+    @staticmethod
+    async def generate_category_reply_markup(session: AsyncSession) -> InlineKeyboardMarkup:
+        """Generate buttons for send all categories"""
+        markup = InlineKeyboardMarkup(row_width=1)
+        categories = await category_actions.get_all_categories(session=session)
+        for category in categories:
+            markup.insert(
+                InlineKeyboardButton(
+                    text=f'{category["name"]}',
+                    callback_data=callback_data_select_category_for_product.new(
+                        action='select_category',
+                        category_id=category['category_id']
+                    )
+                )
+            )
         return markup

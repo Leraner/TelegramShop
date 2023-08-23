@@ -127,10 +127,10 @@ async def basket_right(call: types.CallbackQuery) -> None:
         delete_or_add='delete'
     )
 
-    cache = products_next_page['cache']
-
     if products_next_page is None:
         return
+
+    cache = products_next_page['cache']
 
     for form in products_next_page['post']:
         await dp.bot.edit_message_media(chat_id=call.message.chat.id, **form)

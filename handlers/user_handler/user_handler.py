@@ -19,11 +19,11 @@ async def start_command(message: types.Message, session: AsyncSession) -> None:
         new_user = await UserActions.create_new_user(message=message, session=session)
         await message.answer(
             f'Hello, {new_user.first_name}, welcome to {bot_data["username"]}',
-            reply_markup=await InlineKeyboard.generate_reply_keyboard_markup()
+            reply_markup=await InlineKeyboard.generate_commands_reply_keyboard_markup()
         )
     else:
         if user.is_admin:
             msg = await message.answer(
                 'Вам доступны новые функции',
-                reply_markup=await InlineKeyboard.generate_reply_keyboard_markup(user_is_admin=True)
+                reply_markup=await InlineKeyboard.generate_commands_reply_keyboard_markup(user_is_admin=True)
             )
