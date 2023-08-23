@@ -62,7 +62,7 @@ class DbMiddleware(BaseMiddleware):
                 await dp.bot.delete_message(chat_id=msg.chat.id, message_id=message)
 
     async def on_process_message(self, msg: Message, data: dict) -> None:
-        if msg.text is not None:
+        if msg.text is not None and data['raw_state'] is None:
             if msg.text[0] == '/':
                 await self.delete_useless_messages(msg)
 

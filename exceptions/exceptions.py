@@ -6,7 +6,7 @@ class PermissionDenied(Exception):
 
 
 class SerializerValidationError(Exception):
-    """Exception for validation error, if no such field exists"""
-    def __init__(self, field: str, message='- no such field exists') -> None:
+    """Exception for validation error, if no such field exists or validation error"""
+    def __init__(self, field: str = '', message='- no such field exists') -> None:
         self.message = field + message
         super().__init__(self.message)
