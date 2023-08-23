@@ -15,7 +15,7 @@ class ProductSerializer(BaseModel):
     def validate(cls, field: str) -> str:
         if field.startswith('/'):
             raise SerializerValidationError(
-                message=f'Validation error: incorrect data in {field} field'
+                message=f'Validation error: incorrect data {field}'
             )
         else:
             return field
