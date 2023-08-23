@@ -13,21 +13,21 @@ class ProductActions(Actions):
     pagination_class = ProductPagination
     serializer_class = ProductSerializer
 
-    async def get_products(self, session: AsyncSession) -> list[list[dict]]:
+    async def get_all_products(self, session: AsyncSession) -> list[list[dict]]:
         async with session.begin():
             product_dal = ProductDAL(session=session)
             products = await product_dal.get_all_products()
             return await self.paginated_objects(await self.serialize(products))
 
     @Actions.check_permission(permission_class=PermissionAdmin)
-    async def create_product(self, message: dict, session: AsyncSession, username: str) -> Product:
+    async def create_product(self, data: dict, session: AsyncSession, username: str) -> Product:
         """
         This method for create a product and check user's permissions
         username - (string) - needs for checking user's permissions
         """
         async with session.begin():
             product_dal = ProductDAL(session=session)
-            new_product = await product_dal.create_product(message=message)
+            new_product = await product_dal.create_product(data=data)
             return new_product
 
     async def get_product_by_id(self, product_id: int, session: AsyncSession):

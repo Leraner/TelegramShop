@@ -7,3 +7,4 @@ class ProductState(StatesGroup):
     NAME = State()
     DESCRIPTION = State()
     IMAGE_PATH = State()
+    CATEGORY = State()

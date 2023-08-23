@@ -17,6 +17,19 @@ association_basket_table = Table(
 )
 
 
+class Category(Base):
+    """Category model"""
+    __tablename__ = 'Category'
+
+    category_id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, unique=True)
+    description = Column(String(150), nullable=False)
+    product = relationship('Product', backref=backref('Category'))
+
+    def __repr__(self):
+        return f'<Category (id={self.category_id}, name={self.name}>, description={self.description})>'
+
+
 class Basket(Base):
     """Basket model"""
     __tablename__ = 'Basket'
@@ -53,6 +66,7 @@ class Product(Base):
     image_path = Column(String, default='media/Box.png', nullable=False)
     description = Column(Text, nullable=False)
     created_date = Column(Date, default=datetime.datetime.utcnow(), nullable=False)
+    category_id = Column(Integer, ForeignKey('Category.category_id'), nullable=False)
 
     def __repr__(self):
         return f'<Product(id={self.product_id}, name={self.name}, description={self.description}, created_date={self.created_date})>'

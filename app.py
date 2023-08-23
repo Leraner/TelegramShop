@@ -3,7 +3,7 @@ from aiogram import executor, Dispatcher
 from handlers import dp
 from loader import async_sessionmaker
 from middlewares.db_middleware import DbMiddleware
-
+from management.prepare_stand_categories import CategoryCommand
 
 async def on_startup(dp: Dispatcher):
     # RuntimeWarning - without that it doesn't work
@@ -11,6 +11,8 @@ async def on_startup(dp: Dispatcher):
     #     types.BotCommand("start", "Запустить бота"),
     #     types.BotCommand("create_product", "Создать продукт"),
     # ])
+    # For production
+    # await CategoryCommand.prepare_stand_categories(session_pool=async_sessionmaker)
     dp.middleware.setup(DbMiddleware(session_pool=async_sessionmaker))
 
 

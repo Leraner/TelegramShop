@@ -10,7 +10,8 @@ from actions.basket_actions.basket_actions import BasketActions
 from actions.user_actions.user_actions import UserActions
 from exceptions.exceptions import PermissionDenied
 from handlers.product_handler.services import Pages
-from keyboards.inline_keyboard import InlineKeyboard, callback_data_add_to_basket_or_delete
+from keyboards.inline_keyboard import InlineKeyboard, callback_data_add_to_basket_or_delete, \
+    callback_data_select_category_for_product
 from loader import dp, product_actions, redis_cache
 from state.states import ProductState
 
@@ -27,13 +28,30 @@ async def create_product(message: types.Message, session: AsyncSession, state: F
 
 
 @dp.message_handler(state=ProductState.START_CREATION)
-async def create_product_get_name(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
+async def create_product_category(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
     product_name = message.text
     await state.update_data(NAME=product_name)
-    msg = await message.answer('Напишите описание к продукту')
+    msg = await message.answer(
+        'Выберите категорию для продукта',
+        reply_markup=await InlineKeyboard.generate_category_reply_markup(session=session)
+    )
     useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
-    useless_messages.extend([msg.message_id, message.message_id])
+    useless_messages.extend([message.message_id, msg.message_id])
     await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
+    await state.set_state(ProductState.CATEGORY)
+
+
+@dp.callback_query_handler(
+    callback_data_select_category_for_product.filter(action='select_category'),
+    state=ProductState.CATEGORY
+)
+async def create_product_get_name(call: types.CallbackQuery, callback_data: dict, session: AsyncSession,
+                                  state: FSMContext) -> None:
+    await state.update_data(CATEGORY=int(callback_data['category_id']))
+    msg = await call.message.answer('Напишите описание к продукту')
+    useless_messages = json.loads(await redis_cache.get(call.from_user.username + ':useless_messages'))
+    useless_messages.extend([msg.message_id])
+    await redis_cache.set(call.from_user.username + ':useless_messages', json.dumps(useless_messages))
     await state.set_state(ProductState.DESCRIPTION)
 
 
@@ -60,13 +78,14 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
     data = {
         'name': product_state_data['NAME'],
         'description': product_state_data['DESCRIPTION'],
-        'image_path': path
+        'image_path': path,
+        'category_id': product_state_data['CATEGORY']
     }
     try:
         new_product = await product_actions.create_product(
-            message=data,
+            data=data,
             session=session,
-            username=message.from_user.username
+            username=message.from_user.username,
         )
     except PermissionDenied as error:
         await message.answer(error.message)
@@ -100,7 +119,7 @@ async def add_product_to_basket(call: types.CallbackQuery, callback_data: dict, 
 
 @dp.message_handler(commands=['show_products'])
 async def show_all_products(message: types.Message, session: AsyncSession) -> None:
-    all_products = await product_actions.get_products(session=session)
+    all_products = await product_actions.get_all_products(session=session)
 
     json_data = {
         'messages': [],
@@ -200,10 +219,10 @@ async def product_right(call: types.CallbackQuery) -> None:
         delete_or_add='add'
     )
 
-    cache = products_next_page.pop('cache')
-
     if products_next_page is None:
         return
+
+    cache = products_next_page.pop('cache')
 
     for form in products_next_page['post']:
         await dp.bot.edit_message_media(chat_id=call.message.chat.id, **form)

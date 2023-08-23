@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 import config
 from actions.basket_actions.basket_actions import BasketActions
+from actions.category_actions.category_actions import CategoryActions
 from actions.product_actions.product_actions import ProductActions
 
 # -------------------------------LOGS-----------------------------------------------
@@ -37,3 +38,4 @@ sentry_sdk.init(
 # ---------------------------------ACTIONS------------------------------------------
 product_actions = ProductActions()
 basket_actions = BasketActions()
+category_actions = CategoryActions()

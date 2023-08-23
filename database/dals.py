@@ -1,14 +1,36 @@
 import logging
+from typing import Union, Any, Sequence
 
-from sqlalchemy import select
+from sqlalchemy import select, Row, RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from database.models import User, Product, Basket
+from database.models import User, Product, Basket, Category
+
+
+class CategoryDAL:
+    """Data Access Layer for operating category info"""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get_all_categories(self) -> Sequence[Union[Union[Row, RowMapping], Any]]:
+        query = select(Category)
+        result = await self.session.execute(query)
+        categories = result.scalars().all()
+        return categories
+
+    async def create_new_category(self, data: dict) -> Category:
+        new_category = Category(**data)
+        self.session.add(new_category)
+        await self.session.flush()
+        logging.info(f'CREATED NEW CATEGORY {new_category}')
+        return new_category
 
 
 class BasketDAL:
     """Data Access Layer for operating basket info"""
+
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -43,6 +65,7 @@ class BasketDAL:
 
 class UserDAL:
     """Data Access Layer for operating user info"""
+
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -71,17 +94,18 @@ class UserDAL:
 
 class ProductDAL:
     """Data Access Layer for operating product info"""
+
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def create_product(self, message: dict) -> Product:
-        new_product = Product(**message)
+    async def create_product(self, data: dict) -> Product:
+        new_product = Product(**data)
         self.session.add(new_product)
         await self.session.flush()
         logging.info(f'CREATED NEW {new_product}')
         return new_product
 
-    async def get_all_products(self) -> list[Product]:
+    async def get_all_products(self) -> Sequence[Union[Union[Row, RowMapping], Any]]:
         query = select(Product)
         result = await self.session.execute(query)
         products = result.scalars().all()
