@@ -122,6 +122,13 @@ async def add_product_to_basket(call: types.CallbackQuery, callback_data: dict, 
 async def show_all_products(message: types.Message, session: AsyncSession) -> None:
     all_products = await product_actions.get_all_products(session=session)
 
+    if len(all_products) == 0:
+        msg = await message.answer('Продукты скоро появятся')
+        useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
+        useless_messages.append(msg.message_id)
+        await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
+        return
+
     json_data = {
         'messages': [],
         'tab_message': None,
