@@ -26,7 +26,7 @@ class Actions:
         return bar
 
     @classmethod
-    async def serialize(cls, objects):
+    async def serialize(cls, objects) -> list:
         if cls.serializer_class is None:
             raise Exception('You did not specify serializer class')
         new_objects_list = []
@@ -37,6 +37,17 @@ class Actions:
                 field = str(error).split('Field')[0]
                 raise SerializerValidationError(field)
         return new_objects_list
+
+    @classmethod
+    async def validate(cls, object) -> dict:
+        if cls.serializer_class is None:
+            raise Exception('You did not specify serializer class')
+        new_object = dict(cls.serializer_class(**object))
+        new_data = {}
+        for field in new_object.copy():
+            if new_object[field] is not None:
+                new_data.update({field: new_object[field]})
+        return new_data
 
     @classmethod
     def paginate(cls, objects) -> list:

@@ -27,7 +27,7 @@ class ProductActions(Actions):
         """
         async with session.begin():
             product_dal = ProductDAL(session=session)
-            new_product = await product_dal.create_product(data=data)
+            new_product = await product_dal.create_product(data=await self.validate(data))
             return new_product
 
     async def get_product_by_id(self, product_id: int, session: AsyncSession):

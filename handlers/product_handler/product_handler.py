@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from actions.basket_actions.basket_actions import BasketActions
 from actions.user_actions.user_actions import UserActions
-from exceptions.exceptions import PermissionDenied
+from exceptions.exceptions import PermissionDenied, SerializerValidationError
 from handlers.product_handler.services import Pages
 from keyboards.inline_keyboard import InlineKeyboard, callback_data_add_to_basket_or_delete, \
     callback_data_select_category_for_product
@@ -81,14 +81,16 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
         'image_path': path,
         'category_id': product_state_data['CATEGORY']
     }
+    useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
     try:
         new_product = await product_actions.create_product(
             data=data,
             session=session,
             username=message.from_user.username,
         )
-    except PermissionDenied as error:
-        await message.answer(error.message)
+    except (PermissionDenied, SerializerValidationError) as error:
+        msg = await message.answer(error.message)
+        useless_messages.extend([msg.message_id, message.message_id])
     else:
         msg1 = await message.answer('Продукт успешно создан')
         caption = f"""
@@ -100,9 +102,8 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
             caption=caption,
             parse_mode='HTML'
         )
-        useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
         useless_messages.extend([msg1.message_id, msg2.message_id, message.message_id])
-        await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
+    await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
     await state.finish()
 
 
