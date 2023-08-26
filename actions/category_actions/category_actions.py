@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from actions.actions import Actions
-from database.dals import CategoryDAL
-from serializers.category_serializer import CategorySerializer
+from database import CategoryDAL
+from serializers import CategorySerializer
 
 
 class CategoryActions(Actions):

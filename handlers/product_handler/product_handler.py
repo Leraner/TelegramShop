@@ -6,24 +6,55 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import ContentType
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from actions.basket_actions.basket_actions import BasketActions
-from actions.user_actions.user_actions import UserActions
+from actions import product_actions, basket_actions, user_actions
 from exceptions.exceptions import PermissionDenied, SerializerValidationError
-from handlers.product_handler.services import Pages
+from handlers.product_handler.services import Pages, Service
 from keyboards.inline_keyboard import InlineKeyboard, callback_data_add_to_basket_or_delete, \
     callback_data_select_category_for_product
-from loader import dp, product_actions, redis_cache
-from state.states import ProductState
+from loader import dp, redis_cache, elastic_search_client
+from state.states import ProductState, SearchProductState
 
 CACHE_KEY = ':product'
+
+
+@dp.message_handler(commands=['find'])
+async def search_products(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
+    msg = await message.answer('Введите, что вы хотите найти')
+    await Service.set_unused_messages_into_cache(
+        [msg.message_id], message.from_user.username + ':useless_messages'
+    )
+    await state.set_state(SearchProductState.SEARCH_REQUEST)
+
+
+@dp.message_handler(state=SearchProductState.SEARCH_REQUEST)
+async def search_products(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
+    search_request = message.text
+    searching_result = await elastic_search_client.search_elastic_products(search_request)
+    await Service.set_unused_messages_into_cache(
+        [message.message_id], message.from_user.username + ':useless_messages'
+    )
+
+    if len(searching_result) == 0:
+        msg = await message.answer('По вашему запросу ничего не найдено')
+        await Service.set_unused_messages_into_cache(
+            [msg.message_id], message.from_user.username + ':useless_messages'
+        )
+        await state.finish()
+        return
+
+    json_data = await Service.show_products(all_products=searching_result, message=message)
+
+    await redis_cache.set(
+        message.from_user.username + CACHE_KEY,
+        json.dumps(json_data, default=str)
+    )
+    await state.finish()
 
 
 @dp.message_handler(commands=['create_product'])
 async def create_product(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
     msg = await message.answer('Напишите название продукта')
-    useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
-    useless_messages.append(msg.message_id)
-    await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
+    await Service.set_unused_messages_into_cache([msg.message_id], message.from_user.username + ':useless_messages')
     await state.set_state(ProductState.START_CREATION)
 
 
@@ -35,9 +66,10 @@ async def create_product_category(message: types.Message, session: AsyncSession,
         'Выберите категорию для продукта',
         reply_markup=await InlineKeyboard.generate_category_reply_markup(session=session)
     )
-    useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
-    useless_messages.extend([message.message_id, msg.message_id])
-    await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
+    await Service.set_unused_messages_into_cache(
+        [message.message_id, msg.message_id],
+        message.from_user.username + ':useless_messages'
+    )
     await state.set_state(ProductState.CATEGORY)
 
 
@@ -49,9 +81,7 @@ async def create_product_get_name(call: types.CallbackQuery, callback_data: dict
                                   state: FSMContext) -> None:
     await state.update_data(CATEGORY=int(callback_data['category_id']))
     msg = await call.message.answer('Напишите описание к продукту')
-    useless_messages = json.loads(await redis_cache.get(call.from_user.username + ':useless_messages'))
-    useless_messages.extend([msg.message_id])
-    await redis_cache.set(call.from_user.username + ':useless_messages', json.dumps(useless_messages))
+    await Service.set_unused_messages_into_cache([msg.message_id], call.from_user.username + ':useless_messages')
     await state.set_state(ProductState.DESCRIPTION)
 
 
@@ -60,9 +90,10 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
     product_description = message.text
     await state.update_data(DESCRIPTION=product_description)
     msg = await message.answer('Пришлите изображение продукта')
-    useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
-    useless_messages.extend([msg.message_id, message.message_id])
-    await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
+    await Service.set_unused_messages_into_cache(
+        [msg.message_id, message.message_id],
+        message.from_user.username + ':useless_messages'
+    )
     await state.set_state(ProductState.IMAGE_PATH)
 
 
@@ -81,16 +112,18 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
         'image_path': path,
         'category_id': product_state_data['CATEGORY']
     }
-    useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
     try:
         new_product = await product_actions.create_product(
             data=data,
             session=session,
-            username=message.from_user.username,
+            user=await user_actions.get_user_by_username(message.from_user.username, session=session),
         )
     except (PermissionDenied, SerializerValidationError) as error:
         msg = await message.answer(error.message)
-        useless_messages.extend([msg.message_id, message.message_id])
+        await Service.set_unused_messages_into_cache(
+            [msg.message_id, message.message_id],
+            message.from_user.username + ':useless_messages'
+        )
     else:
         msg1 = await message.answer('Продукт успешно создан')
         caption = f"""
@@ -102,19 +135,21 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
             caption=caption,
             parse_mode='HTML'
         )
-        useless_messages.extend([msg1.message_id, msg2.message_id, message.message_id])
-    await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
+        await Service.set_unused_messages_into_cache(
+            [msg1.message_id, msg2.message_id, message.message_id],
+            message.from_user.username + ':useless_messages'
+        )
     await state.finish()
 
 
 @dp.callback_query_handler(callback_data_add_to_basket_or_delete.filter(action='add_product_to_basket'))
 async def add_product_to_basket(call: types.CallbackQuery, callback_data: dict, session: AsyncSession) -> None:
-    user = await UserActions.get_user_by_username(username=call.from_user.username, session=session)
+    user = await user_actions.get_user_by_username(username=call.from_user.username, session=session)
     product = await product_actions.get_product_by_id(product_id=int(callback_data['product_id']), session=session)
     if product in user.basket.products:
         await call.answer(text='🥵Товар уже есть в корзине', show_alert=True)
     else:
-        new_user = await BasketActions.add_product_to_user_basket(user=user, product=product, session=session)
+        new_user = await basket_actions.add_product_to_user_basket(user=user, product=product, session=session)
         await call.answer(text='✅Товар добавлен в корзину', show_alert=True)
 
 
@@ -124,42 +159,12 @@ async def show_all_products(message: types.Message, session: AsyncSession) -> No
 
     if len(all_products) == 0:
         msg = await message.answer('Продукты скоро появятся')
-        useless_messages = json.loads(await redis_cache.get(message.from_user.username + ':useless_messages'))
-        useless_messages.append(msg.message_id)
-        await redis_cache.set(message.from_user.username + ':useless_messages', json.dumps(useless_messages))
+        await Service.set_unused_messages_into_cache(
+            [msg.message_id], message.from_user.username + ':useless_messages'
+        )
         return
 
-    json_data = {
-        'messages': [],
-        'tab_message': None,
-        'current_page': 0,
-        'products': all_products
-    }
-
-    for product in all_products[0]:
-        caption = f"""
-             <b>{product['name']}</b>
-             {product['description']}
-        """
-        product_message = await message.answer_photo(
-            open(f"{product['image_path']}", 'rb'),
-            caption=caption,
-            parse_mode='HTML',
-            reply_markup=await InlineKeyboard.generate_add_to_basket_or_delete_reply_markup(
-                product_id=product['product_id'], delete_or_add='add'
-            )
-        )
-        json_data['messages'].append(product_message.message_id)
-
-    tab_message = await message.answer(
-        'Переключалка',
-        reply_markup=await InlineKeyboard.generate_switcher_reply_markup(
-            current_page=1,
-            pages=len(all_products),
-            callback_data=('product_left', 'product_right')
-        )
-    )
-    json_data['tab_message'] = tab_message.message_id
+    json_data = await Service.show_products(all_products=all_products, message=message)
 
     await redis_cache.set(
         message.from_user.username + CACHE_KEY,

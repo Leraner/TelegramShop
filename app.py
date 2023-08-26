@@ -1,9 +1,10 @@
 from aiogram import executor, Dispatcher
 
 from handlers import dp
-from loader import async_sessionmaker
+from loader import async_sessionmaker, elastic_search_client
 from middlewares.db_middleware import DbMiddleware
 from management.prepare_stand_categories import CategoryCommand
+
 
 async def on_startup(dp: Dispatcher):
     # RuntimeWarning - without that it doesn't work
@@ -14,6 +15,7 @@ async def on_startup(dp: Dispatcher):
     # For production
     # await CategoryCommand.prepare_stand_categories(session_pool=async_sessionmaker)
     dp.middleware.setup(DbMiddleware(session_pool=async_sessionmaker))
+    await elastic_search_client.create_index()
 
 
 async def on_shutdown(dp: Dispatcher):

@@ -7,9 +7,7 @@ from aioredis import Redis
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 import config
-from actions.basket_actions.basket_actions import BasketActions
-from actions.category_actions.category_actions import CategoryActions
-from actions.product_actions.product_actions import ProductActions
+from search.search import ElasticSearchClient
 
 # -------------------------------LOGS-----------------------------------------------
 
@@ -35,7 +33,7 @@ sentry_sdk.init(
     # We recommend adjusting this value in production.
     traces_sample_rate=1.0
 )
-# ---------------------------------ACTIONS------------------------------------------
-product_actions = ProductActions()
-basket_actions = BasketActions()
-category_actions = CategoryActions()
+elastic_search_client = ElasticSearchClient(
+    indices=config.ELASTIC_INDICES,
+    elastic_hosts=config.elastic_hosts
+)

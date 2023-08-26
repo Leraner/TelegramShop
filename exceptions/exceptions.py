@@ -12,3 +12,9 @@ class SerializerValidationError(Exception):
     def __init__(self, field: str = '', message='- no such field exists') -> None:
         self.message = field + message
         super().__init__(self.message)
+
+
+class SerializerNotFound(Exception):
+    def __init__(self, message='You did not specify serializer class') -> None:
+        self.message = message
+        super().__init__(self.message)

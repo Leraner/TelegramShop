@@ -1,7 +1,6 @@
 from pydantic import ValidationError
 
-from actions.user_actions.user_actions import UserActions
-from exceptions.exceptions import PermissionDenied, SerializerValidationError
+from exceptions.exceptions import PermissionDenied, SerializerValidationError, SerializerNotFound
 
 
 class Actions:
@@ -13,10 +12,8 @@ class Actions:
     def check_permission(permission_class):
         def bar(func):
             async def wrapper(*args, **kwargs):
-                username = kwargs.get('username')
                 if permission_class is not None:
-                    user = await UserActions.get_user_by_username(username=username, session=kwargs.get('session'))
-                    if permission_class.permission(user):
+                    if permission_class.permission(kwargs.get('user')):
                         return await func(*args, **kwargs)
                     else:
                         raise PermissionDenied()
@@ -28,7 +25,7 @@ class Actions:
     @classmethod
     async def serialize(cls, objects) -> list:
         if cls.serializer_class is None:
-            raise Exception('You did not specify serializer class')
+            raise SerializerNotFound()
         new_objects_list = []
         for object in objects:
             try:
@@ -41,7 +38,7 @@ class Actions:
     @classmethod
     async def validate(cls, object) -> dict:
         if cls.serializer_class is None:
-            raise Exception('You did not specify serializer class')
+            raise SerializerNotFound()
         new_object = dict(cls.serializer_class(**object))
         new_data = {}
         for field in new_object.copy():
@@ -60,3 +57,22 @@ class Actions:
             paginated_products = list(cls.paginate(objects))
             return paginated_products
         return objects
+
+
+class ElasticSearchActions(Actions):
+    """ElasticSearch Action class"""
+    serializer_class = None
+    pagination_class = None
+
+    @classmethod
+    async def serialize(cls, objects) -> list:
+        if cls.serializer_class is None:
+            raise SerializerNotFound()
+        new_objects_list = []
+        for object in objects:
+            try:
+                new_objects_list.append(cls.serializer_class(**object['_source']).dict())
+            except ValidationError as error:
+                field = str(error).split('Field')[0]
+                raise SerializerValidationError(field)
+        return new_objects_list

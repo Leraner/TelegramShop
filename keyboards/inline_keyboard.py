@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeybo
 from aiogram.utils.callback_data import CallbackData
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from loader import category_actions
+from actions import category_actions
 
 callback_data_add_to_basket_or_delete = CallbackData('product_to_basket', 'action', 'product_id')
 callback_data_select_category_for_product = CallbackData('category_for_product', 'action', 'category_id')

@@ -2,11 +2,61 @@ import json
 from itertools import zip_longest
 from typing import Optional
 
+from aiogram import types
 from aiogram.types import InputMediaPhoto, InlineKeyboardMarkup
 
 from database.models import Product
 from keyboards.inline_keyboard import InlineKeyboard
 from loader import redis_cache
+
+
+class Service:
+    @staticmethod
+    async def set_unused_messages_into_cache(message: list, key: str) -> None:
+        """
+        Method that sends messages to redis cache with ':useless_messages' key.
+        So that later messages are deleted when another command is called
+        """
+        useless_messages = json.loads(await redis_cache.get(key))
+        useless_messages.extend(message)
+        await redis_cache.set(key, json.dumps(useless_messages))
+
+    @staticmethod
+    async def show_products(all_products: list[list], message: types.Message) -> dict:
+        """Method for displaying products, which is called when products need to be displayed in some handler"""
+        json_data = {
+            'messages': [],
+            'tab_message': None,
+            'current_page': 0,
+            'products': all_products
+        }
+
+        for product in all_products[0]:
+            caption = f"""
+                     <b>{product['name']}</b>
+                     {product['description']}
+                """
+            product_message = await message.answer_photo(
+                open(f"{product['image_path']}", 'rb'),
+                caption=caption,
+                parse_mode='HTML',
+                reply_markup=await InlineKeyboard.generate_add_to_basket_or_delete_reply_markup(
+                    product_id=product['product_id'], delete_or_add='add'
+                )
+            )
+            json_data['messages'].append(product_message.message_id)
+
+        tab_message = await message.answer(
+            'Переключалка',
+            reply_markup=await InlineKeyboard.generate_switcher_reply_markup(
+                current_page=1,
+                pages=len(all_products),
+                callback_data=('product_left', 'product_right')
+            )
+        )
+        json_data['tab_message'] = tab_message.message_id
+
+        return json_data
 
 
 class Pages:

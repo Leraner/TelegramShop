@@ -11,6 +11,8 @@ attrs==23.1.0
 Babel==2.9.1
 certifi==2023.7.22
 charset-normalizer==3.2.0
+elastic-transport==8.4.0
+elasticsearch==8.9.0
 frozenlist==1.4.0
 greenlet==2.0.2
 idna==3.4
@@ -27,5 +29,5 @@ redis==4.6.0
 sentry-sdk==1.29.2
 SQLAlchemy==2.0.19
 typing_extensions==4.7.1
-urllib3==2.0.4
+urllib3==1.26.16
 yarl==1.9.2
