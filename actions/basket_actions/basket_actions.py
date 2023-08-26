@@ -4,9 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from actions.actions import Actions
 from actions.basket_actions.pagination import BasketPagination
-from database.dals import BasketDAL
-from database.models import Basket, Product, User
-from serializers.basket_serializer import BasketProductsSerializer
+from database import Basket, Product, User, BasketDAL
+from serializers import BasketProductsSerializer
 
 
 class BasketActions(Actions):

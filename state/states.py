@@ -8,3 +8,7 @@ class ProductState(StatesGroup):
     DESCRIPTION = State()
     IMAGE_PATH = State()
     CATEGORY = State()
+
+
+class SearchProductState(StatesGroup):
+    SEARCH_REQUEST = State()

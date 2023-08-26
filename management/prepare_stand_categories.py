@@ -2,11 +2,12 @@ import logging
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from database.models import Category
+from database import Category
 
 
 class CategoryCommand:
     """Prepare stand category class"""
+
     @staticmethod
     async def prepare_stand_categories(session_pool: async_sessionmaker):
         """Creating categories in the database before starting bot"""
@@ -26,7 +27,3 @@ class CategoryCommand:
                     session.add(new_category)
                     await session.flush()
                     logging.info(f'CREATED CATEGORY {new_category}')
-
-
-
-

@@ -5,7 +5,7 @@ from sqlalchemy import select, Row, RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from database.models import User, Product, Basket, Category
+from database import User, Product, Basket, Category
 
 
 class CategoryDAL:

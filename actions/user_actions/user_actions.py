@@ -1,12 +1,12 @@
 from aiogram import types
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.dals import UserDAL
-from database.models import User
+from database import UserDAL, User
 
 
 class UserActions:
     """User actions class"""
+
     @staticmethod
     async def create_new_user(message: types.Message, session: AsyncSession) -> User:
         async with session.begin():

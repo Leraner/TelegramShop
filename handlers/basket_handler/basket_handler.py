@@ -3,18 +3,17 @@ import json
 from aiogram import types
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from actions.basket_actions.basket_actions import BasketActions
-from actions.user_actions.user_actions import UserActions
+from actions import product_actions, basket_actions, user_actions
 from handlers.product_handler.services import Pages
 from keyboards.inline_keyboard import InlineKeyboard, callback_data_add_to_basket_or_delete
-from loader import dp, basket_actions, redis_cache, product_actions
+from loader import dp, redis_cache
 
 CACHE_KEY = ':basket'
 
 
 @dp.message_handler(commands=['basket'])
 async def show_user_basket(message: types.Message, session: AsyncSession) -> None:
-    user = await UserActions.get_user_by_username(username=message.from_user.username, session=session)
+    user = await user_actions.get_user_by_username(username=message.from_user.username, session=session)
     user_basket_products = await basket_actions.get_user_basket(user_id=user.user_id, session=session)
 
     json_data = {
@@ -64,12 +63,12 @@ async def show_user_basket(message: types.Message, session: AsyncSession) -> Non
 
 @dp.callback_query_handler(callback_data_add_to_basket_or_delete.filter(action='remove_product_from_basket'))
 async def remove_product_from_basket(call: types.CallbackQuery, callback_data: dict, session: AsyncSession) -> None:
-    user = await UserActions.get_user_by_username(username=call.from_user.username, session=session)
+    user = await user_actions.get_user_by_username(username=call.from_user.username, session=session)
     product = await product_actions.get_product_by_id(product_id=int(callback_data['product_id']), session=session)
     if not (product in user.basket.products):
         await call.answer(text='🥵Такого товара уже нет в вашей корзине', show_alert=True)
     else:
-        new_user = await BasketActions.remove_product_from_basket(user=user, product=product, session=session)
+        new_user = await basket_actions.remove_product_from_basket(user=user, product=product, session=session)
         await call.answer(text='✅Товар удален из корзины', show_alert=True)
 
 
