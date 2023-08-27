@@ -103,7 +103,6 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
     date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
     date_file_name = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     path = f'media/products_images/{date}/{date_file_name}.png'
-    await photo.download(destination_file=path)
 
     product_state_data = await state.get_data()
     data = {
@@ -118,6 +117,7 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
             session=session,
             user=await user_actions.get_user_by_username(message.from_user.username, session=session),
         )
+        await photo.download(destination_file=path)
     except (PermissionDenied, SerializerValidationError) as error:
         msg = await message.answer(error.message)
         await Service.set_unused_messages_into_cache(
