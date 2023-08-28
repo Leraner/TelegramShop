@@ -20,55 +20,32 @@ class DbMiddleware(BaseMiddleware):
             return json.loads(useless_messages)
         return []
 
-    async def get_all_useless_basket_messages(self, msg: Message) -> list:
-        """Return the messages with products that were sent during the /basket command"""
-        basket_data = await redis_cache.get(msg.from_user.username + ':basket')
-        if basket_data is not None:
-            basket_data = json.loads(basket_data)
-            messages = basket_data['messages'].copy()
-            messages.append(basket_data['tab_message'])
-            basket_data['messages'].clear()
-            basket_data['tab_message'] = None
-            await redis_cache.set(msg.from_user.username + ':basket', json.dumps(basket_data))
-            return messages
-        return []
-
-    async def get_all_useless_product_messages(self, msg: Message) -> list:
-        """Return the messages with products that were sent during the /show_products command"""
-        product_data = await redis_cache.get(msg.from_user.username + ':product')
-        if product_data is not None:
-            product_data = json.loads(product_data)
-            messages = product_data['messages'].copy()
-            messages.append(product_data['tab_message'])
-            product_data['messages'].clear()
-            product_data['tab_message'] = None
-            await redis_cache.set(msg.from_user.username + ':product', json.dumps(product_data))
-            return messages
-        return []
-
     async def delete_useless_messages(self, msg: Message) -> None:
         """Delete messages when user send another command"""
         useless_messages = await self.get_all_useless_messages(msg)
-        useless_messages_basket = await self.get_all_useless_basket_messages(msg)
-        useless_messages_product = await self.get_all_useless_product_messages(msg)
-        useless_messages = [
-            *useless_messages,
-            *useless_messages_basket,
-            *useless_messages_product
-        ]
 
-        for message in useless_messages:
+        for message in set(useless_messages):
             if message is not None:
-                await dp.bot.delete_message(chat_id=msg.chat.id, message_id=message)
+                await dp.bot.delete_message(chat_id=msg.chat.id, message_id=message, for_cache=True)
+
+    async def add_useless_messages_with_state(self, msg: Message) -> None:
+        """This method add user's messages into cache with key - :useless_messages"""
+        data_messages = await redis_cache.get(msg.from_user.username + ':useless_messages')
+        if data_messages is not None:
+            data_messages = json.loads(data_messages)
+            data_messages.append(msg.message_id)
+            await redis_cache.set(msg.from_user.username + ':useless_messages', json.dumps(data_messages))
+        else:
+            data_messages = []
+            data_messages.append(msg.message_id)
+            await redis_cache.set(msg.from_user.username + ':useless_messages', json.dumps(data_messages))
 
     async def on_process_message(self, msg: Message, data: dict) -> None:
         if msg.text is not None and data['raw_state'] is None:
             if msg.text[0] == '/':
                 await self.delete_useless_messages(msg)
 
-        if data['raw_state'] is None:
-            # Add to redis cache message without state
-            await redis_cache.set(msg.from_user.username + ':useless_messages', json.dumps([msg.message_id]))
+        await self.add_useless_messages_with_state(msg=msg)
 
         async with self.session_pool() as session:
             data['session'] = session

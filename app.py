@@ -1,3 +1,5 @@
+""" Point of entry """
+
 from aiogram import executor, Dispatcher
 
 from handlers import dp
