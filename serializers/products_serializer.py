@@ -10,9 +10,24 @@ class ProductSerializer(BaseModel):
     image_path: str
     category_id: int
 
-    @field_validator('name', 'description')
+    @field_validator('name')
     @classmethod
-    def validate(cls, field: str) -> str:
+    def name_validator(cls, field: str) -> str:
+        if len(field) > 150:
+            raise SerializerValidationError(
+                message='Maximum number of characters 150'
+            )
+
+        if field.startswith('/'):
+            raise SerializerValidationError(
+                message=f'Validation error: incorrect data {field}'
+            )
+        else:
+            return field
+
+    @field_validator('description')
+    @classmethod
+    def description_validator(cls, field: str) -> str:
         if field.startswith('/'):
             raise SerializerValidationError(
                 message=f'Validation error: incorrect data {field}'

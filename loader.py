@@ -1,7 +1,7 @@
 import logging
 
 import sentry_sdk
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.fsm_storage.redis import RedisStorage2
 from aioredis import Redis
