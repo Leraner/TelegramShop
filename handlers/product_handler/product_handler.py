@@ -3,6 +3,7 @@ import datetime
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import ContentType
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from actions import product_actions, basket_actions, user_actions
@@ -106,7 +107,7 @@ async def create_product_get_image(message: types.Message, session: AsyncSession
             user=await user_actions.get_user_by_username(message.from_user.username, session=session),
         )
         await photo.download(destination_file=path)
-    except (PermissionDenied, SerializerValidationError) as error:
+    except (PermissionDenied, SerializerValidationError, ValidationError) as error:
         await message.answer(error.message)
     else:
         await message.answer('Продукт успешно создан')

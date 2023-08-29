@@ -1,10 +1,7 @@
-import asyncio
 import datetime
 
-from sqlalchemy import Column, String, Integer, Text, Date, Boolean, ForeignKey, Table, event
+from sqlalchemy import Column, String, Integer, Text, Date, Boolean, ForeignKey, Table
 from sqlalchemy.orm import DeclarativeBase, relationship, backref
-
-from loader import elastic_search_client
 
 
 class Base(DeclarativeBase):
@@ -65,7 +62,7 @@ class Product(Base):
     __tablename__ = 'Product'
 
     product_id = Column(Integer, primary_key=True)
-    name = Column(String(35), nullable=False)
+    name = Column(String(150), nullable=False)
     image_path = Column(String, default='media/Box.png', nullable=False)
     description = Column(Text, nullable=False)
     created_date = Column(Date, default=datetime.datetime.utcnow(), nullable=False)
@@ -73,9 +70,3 @@ class Product(Base):
 
     def __repr__(self):
         return f'<Product(id={self.product_id}, name={self.name}, description={self.description}, created_date={self.created_date})>'
-
-
-@event.listens_for(Product, 'after_insert')
-def create_product_in_elastic(mapper, connection, target):
-    """On creating model in database create product in elasticsearch index"""
-    asyncio.create_task(elastic_search_client.create_elastic_product(product=target))
