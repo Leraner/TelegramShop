@@ -26,4 +26,4 @@ class CategoryCommand:
                     )
                     session.add(new_category)
                     await session.flush()
-                    logging.info(f'CREATED CATEGORY {new_category}')
+                    logging.info(f'CREATED CATEGORY {new_category} - PREPARE STAND')

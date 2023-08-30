@@ -1,4 +1,5 @@
 import json
+import logging
 import typing
 
 from aiogram import Bot, types
@@ -31,6 +32,7 @@ class CustomBotClient(Bot):
             useless_messages = await self.get_cache(username=username, cache_key=':useless_messages')
             useless_messages.pop(useless_messages.index(message_id))
             await self.set_cache(username=username, cache_key=':useless_messages', cache=useless_messages)
+            logging.info(f'MESSAGE {message_id} DELETED FROM {username} CACHE')
         await super().delete_message(chat_id=chat_id, message_id=message_id)
 
     async def send_photo(self,
@@ -69,6 +71,7 @@ class CustomBotClient(Bot):
         useless_messages = await self.get_cache(username=username, cache_key=':useless_messages')
         useless_messages.append(message_with_photo.message_id)
         await self.set_cache(username=username, cache_key=':useless_messages', cache=useless_messages)
+        logging.info(f'ADDED MESSAGE(PHOTO) {message_with_photo.message_id} INTO {username} CACHE')
 
         return message_with_photo
 
@@ -107,5 +110,6 @@ class CustomBotClient(Bot):
         useless_messages = await self.get_cache(username=username, cache_key=':useless_messages')
         useless_messages.append(message.message_id)
         await self.set_cache(username=username, cache_key=':useless_messages', cache=useless_messages)
+        logging.info(f'ADDED MESSAGE(SIMPLE MESSAGE) {message.message_id} INTO {username} CACHE')
 
         return message

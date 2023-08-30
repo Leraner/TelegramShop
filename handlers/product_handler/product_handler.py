@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
@@ -176,6 +177,9 @@ async def product_left(call: types.CallbackQuery) -> None:
         cache=cache,
         object=Service.product_object
     )
+
+    logging.info(f'SWITCHED PREVIOUS PAGE INTO {call.from_user.username} CHAT')
+
     await dp.bot.set_cache(username=call.from_user.username, cache_key=CACHE_KEY, cache=cache)
 
 
@@ -197,5 +201,7 @@ async def product_right(call: types.CallbackQuery) -> None:
         cache=cache,
         object=Service.product_object
     )
+
+    logging.info(f'SWITCHED NEXT PAGE INTO {call.from_user.username} CHAT')
 
     await dp.bot.set_cache(username=call.from_user.username, cache_key=CACHE_KEY, cache=cache)

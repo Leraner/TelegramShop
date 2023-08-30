@@ -18,6 +18,7 @@ class CategoryDAL:
         query = select(Category)
         result = await self.session.execute(query)
         categories = result.scalars().all()
+        logging.info(f'RECEIVED ALL CATEGORIES')
         return categories
 
     async def create_new_category(self, data: dict) -> Category:
@@ -60,6 +61,7 @@ class BasketDAL:
         result = await self.session.execute(query)
         products = result.fetchone()
         if products is not None:
+            logging.info(f'RECEIVED USER BASKET BY USER_ID - {user_id}')
             return products[0].products
 
 
@@ -89,6 +91,7 @@ class UserDAL:
         result = await self.session.execute(query)
         user_rows = result.fetchone()
         if user_rows is not None:
+            logging.info(f'RECEIVED USER {user_rows[0]}, BY USERNAME {username}')
             return user_rows[0]
 
 
@@ -109,6 +112,7 @@ class ProductDAL:
         query = select(Product)
         result = await self.session.execute(query)
         products = result.scalars().all()
+        logging.info("RECEIVED ALL PRODUCTS")
         return products
 
     async def get_product_by_id(self, product_id: int) -> Product:
@@ -116,4 +120,5 @@ class ProductDAL:
         result = await self.session.execute(query)
         product_rows = result.fetchone()
         if product_rows is not None:
+            logging.info(f'RECEIVED PRODUCT: {product_rows[0]}, BY PRODUCT_ID - {product_id}')
             return product_rows[0]
