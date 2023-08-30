@@ -5,6 +5,7 @@ from aiogram.dispatcher.middlewares import BaseMiddleware
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from keyboards import inline_keyboard
 from loader import redis_cache, dp
 
 
@@ -46,7 +47,7 @@ class DbMiddleware(BaseMiddleware):
 
     async def on_process_message(self, msg: Message, data: dict) -> None:
         if msg.text is not None and data['raw_state'] is None:
-            if msg.text[0] == '/':
+            if msg.text in inline_keyboard.emoji:
                 await self.delete_useless_messages(msg)
 
         await self.add_useless_messages_with_state(msg=msg)

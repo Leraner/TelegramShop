@@ -12,8 +12,19 @@ callback_data_select_category_for_product = CallbackData('category_for_product',
 
 class InlineKeyboard:
     """Class inlinekeboard generator"""
-    delete_from_basket = 'delete'
-    add_to_basket = 'add'
+
+    def __init__(self):
+        self.delete_from_basket = 'delete'
+        self.add_to_basket = 'add'
+
+        self.emoji_commands = {
+            'find_command': '🔎',
+            'basket_command': '🗑',
+            'all_products_command': '🗃',
+            'create_product_command': '🗳'
+        }
+
+        self.emoji = [self.emoji_commands[command] for command in self.emoji_commands]
 
     @staticmethod
     async def generate_switcher_reply_markup(current_page: int, pages: int,
@@ -35,8 +46,7 @@ class InlineKeyboard:
         markup.add(ib1, ib2, ib3)
         return markup
 
-    @staticmethod
-    async def generate_add_to_basket_or_delete_reply_markup(product_id: int,
+    async def generate_add_to_basket_or_delete_reply_markup(self, product_id: int,
                                                             delete_or_add: str = None) -> Optional[InlineKeyboardMarkup]:
         """
         Generates buttons for removing and adding products to basket
@@ -45,14 +55,14 @@ class InlineKeyboard:
         delete_or_add - param which say what buttons to create (for adding or for removing)
         """
         markup = InlineKeyboardMarkup()
-        if delete_or_add == 'add':
+        if delete_or_add == self.add_to_basket:
             ib1 = InlineKeyboardButton(
                 text='🛒',
                 callback_data=callback_data_add_to_basket_or_delete.new(
                     action='add_product_to_basket', product_id=product_id
                 ),
             )
-        elif delete_or_add == 'delete':
+        elif delete_or_add == self.delete_from_basket:
             ib1 = InlineKeyboardButton(
                 text='❌',
                 callback_data=callback_data_add_to_basket_or_delete.new(
@@ -64,19 +74,19 @@ class InlineKeyboard:
         markup.add(ib1)
         return markup
 
-    @staticmethod
-    async def generate_commands_reply_keyboard_markup(user_is_admin: bool = False) -> ReplyKeyboardMarkup:
+    async def generate_commands_reply_keyboard_markup(self, user_is_admin: bool = False) -> ReplyKeyboardMarkup:
         """
         Generate buttons that helps the user send commands
         user_is_admin - if true, add additional buttons
         """
         markup = ReplyKeyboardMarkup()
-        btn1 = KeyboardButton(text='/basket')
-        btn2 = KeyboardButton(text='/show_products')
+        btn1 = KeyboardButton(text=self.emoji_commands['basket_command'])
+        btn2 = KeyboardButton(text=self.emoji_commands['all_products_command'])
+        btn4 = KeyboardButton(text=self.emoji_commands['find_command'])
         if user_is_admin:
-            btn3 = KeyboardButton(text='/create_product')
+            btn3 = KeyboardButton(text=self.emoji_commands['create_product_command'])
             markup.add(btn3)
-        markup.add(btn1, btn2)
+        markup.add(btn1, btn2, btn4)
         return markup
 
     @staticmethod

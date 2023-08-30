@@ -11,7 +11,7 @@ from actions import product_actions, basket_actions, user_actions
 from exceptions.exceptions import PermissionDenied, SerializerValidationError
 from handlers.product_handler.tools.page_switching import Pages
 from handlers.product_handler.tools.services import Service
-from keyboards.inline_keyboard import InlineKeyboard, callback_data_add_to_basket_or_delete, \
+from keyboards import inline_keyboard, callback_data_add_to_basket_or_delete, \
     callback_data_select_category_for_product
 from loader import dp, elastic_search_client
 from state.states import ProductState, SearchProductState
@@ -19,7 +19,7 @@ from state.states import ProductState, SearchProductState
 CACHE_KEY = ':product'
 
 
-@dp.message_handler(commands=['find'])
+@dp.message_handler(text=inline_keyboard.emoji_commands['find_command'], content_types=['text'])
 async def search_products(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
     await message.answer('Введите, что вы хотите найти')
     await state.set_state(SearchProductState.SEARCH_REQUEST)
@@ -35,7 +35,7 @@ async def search_products(message: types.Message, session: AsyncSession, state: 
         await state.finish()
         return
 
-    markup_switcher = await InlineKeyboard.generate_switcher_reply_markup(
+    markup_switcher = await inline_keyboard.generate_switcher_reply_markup(
         current_page=1,
         pages=len(searching_result),
         callback_data=('product_left', 'product_right')
@@ -45,13 +45,13 @@ async def search_products(message: types.Message, session: AsyncSession, state: 
         all_products=searching_result,
         message=message,
         reply_markup_switcher=markup_switcher,
-        delete_or_add=InlineKeyboard.add_to_basket)
+        delete_or_add=inline_keyboard.add_to_basket)
 
     await dp.bot.set_cache(username=message.from_user.username, cache_key=CACHE_KEY, cache=json_data)
     await state.finish()
 
 
-@dp.message_handler(commands=['create_product'])
+@dp.message_handler(text=inline_keyboard.emoji_commands['create_product_command'], content_types=['text'])
 async def create_product(message: types.Message, session: AsyncSession, state: FSMContext) -> None:
     await message.answer('Напишите название продукта')
     await state.set_state(ProductState.START_CREATION)
@@ -63,7 +63,7 @@ async def create_product_category(message: types.Message, session: AsyncSession,
     await state.update_data(NAME=product_name)
     await message.answer(
         'Выберите категорию для продукта',
-        reply_markup=await InlineKeyboard.generate_category_reply_markup(session=session)
+        reply_markup=await inline_keyboard.generate_category_reply_markup(session=session)
     )
     await state.set_state(ProductState.CATEGORY)
 
@@ -135,7 +135,7 @@ async def add_product_to_basket(call: types.CallbackQuery, callback_data: dict, 
         await call.answer(text='✅Товар добавлен в корзину', show_alert=True)
 
 
-@dp.message_handler(commands=['show_products'])
+@dp.message_handler(text=inline_keyboard.emoji_commands['all_products_command'], content_types=['text'])
 async def show_all_products(message: types.Message, session: AsyncSession) -> None:
     all_products = await product_actions.get_all_products(session=session)
 
@@ -143,7 +143,7 @@ async def show_all_products(message: types.Message, session: AsyncSession) -> No
         await message.answer('Продукты скоро появятся')
         return
 
-    markup_switcher = await InlineKeyboard.generate_switcher_reply_markup(
+    markup_switcher = await inline_keyboard.generate_switcher_reply_markup(
         current_page=1,
         pages=len(all_products),
         callback_data=('product_left', 'product_right')
@@ -153,7 +153,7 @@ async def show_all_products(message: types.Message, session: AsyncSession) -> No
         all_products=all_products,
         message=message,
         reply_markup_switcher=markup_switcher,
-        delete_or_add=InlineKeyboard.add_to_basket
+        delete_or_add=inline_keyboard.add_to_basket
     )
 
     await dp.bot.set_cache(username=message.from_user.username, cache_key=CACHE_KEY, cache=json_data)
@@ -165,7 +165,7 @@ async def product_left(call: types.CallbackQuery) -> None:
     current_page, pages = call.message.reply_markup.inline_keyboard[0][1].text.split('/')
     products_previous_page, cache = await Pages.get_previous_page(
         cache=await dp.bot.get_cache(username=call.from_user.username, cache_key=CACHE_KEY),
-        delete_or_add=InlineKeyboard.add_to_basket
+        delete_or_add=inline_keyboard.add_to_basket
     )
 
     cache = await Service.object_left(
@@ -189,7 +189,7 @@ async def product_right(call: types.CallbackQuery) -> None:
     current_page, pages = call.message.reply_markup.inline_keyboard[0][1].text.split('/')
     products_next_page, cache = await Pages.get_next_page(
         cache=await dp.bot.get_cache(username=call.from_user.username, cache_key=CACHE_KEY),
-        delete_or_add=InlineKeyboard.add_to_basket
+        delete_or_add=inline_keyboard.add_to_basket
     )
 
     cache = await Service.object_right(

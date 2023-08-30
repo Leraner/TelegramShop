@@ -4,7 +4,7 @@ from typing import Optional
 from aiogram.types import InlineKeyboardMarkup, InputMediaPhoto
 
 from database import Product
-from keyboards.inline_keyboard import InlineKeyboard
+from keyboards import inline_keyboard
 
 
 class Pages:
@@ -102,7 +102,7 @@ class Pages:
                     product=product,
                     request_forms=request_forms,
                     message_id=message_id,
-                    reply_markup=await InlineKeyboard.generate_add_to_basket_or_delete_reply_markup(
+                    reply_markup=await inline_keyboard.generate_add_to_basket_or_delete_reply_markup(
                         product_id=product['product_id'], delete_or_add=delete_or_add)
                 )
             else:
@@ -151,7 +151,7 @@ class Pages:
                     product=product,
                     request_forms=request_forms,
                     message_id=message_id,
-                    reply_markup=await InlineKeyboard.generate_add_to_basket_or_delete_reply_markup(
+                    reply_markup=await inline_keyboard.generate_add_to_basket_or_delete_reply_markup(
                         product_id=product['product_id'], delete_or_add=delete_or_add)
                 )
             else:
@@ -159,7 +159,7 @@ class Pages:
                     product=product,
                     request_forms=request_forms,
                     product_card_type=cls.product_card_create,
-                    reply_markup=await InlineKeyboard.generate_add_to_basket_or_delete_reply_markup(
+                    reply_markup=await inline_keyboard.generate_add_to_basket_or_delete_reply_markup(
                         product_id=product['product_id'], delete_or_add=delete_or_add)
                 )
 
