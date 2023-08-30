@@ -13,7 +13,7 @@ from search.search import ElasticSearchClient
 
 # -------------------------------LOGS-----------------------------------------------
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, filename='logs.log', filemode='w')
 
 # -------------------------------DATABASE-------------------------------------------
 engine = create_async_engine(

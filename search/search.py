@@ -27,6 +27,7 @@ class ElasticSearchClient(ElasticSearchActions):
                     settings=self.base_indices[index]['settings'],
                     mappings=self.base_indices[index]['mappings']
                 )
+                logging.info(f'INDEX {index} CREATED')
             except BadRequestError:
                 pass
 
@@ -75,4 +76,5 @@ class ElasticSearchClient(ElasticSearchActions):
             }
         }
         res = await self.client.search(index='product', query=query)
+        logging.info(f'DOCUMENTS FOUND ON REQUEST: {search_request}')
         return await self.paginated_objects(await self.serialize(res.raw['hits']['hits']))

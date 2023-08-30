@@ -1,4 +1,5 @@
 import json
+import logging
 
 from aiogram.dispatcher.middlewares import BaseMiddleware
 from aiogram.types import Message, CallbackQuery
@@ -17,6 +18,7 @@ class DbMiddleware(BaseMiddleware):
         useless_messages = await redis_cache.get(msg.from_user.username + ':useless_messages')
         if useless_messages is not None:
             await redis_cache.set(msg.from_user.username + ':useless_messages', json.dumps([]))
+            logging.info(f'RECEIVED ALL useless_messages IN {msg.from_user.username} CHAT FROM CACHE')
             return json.loads(useless_messages)
         return []
 
@@ -27,6 +29,7 @@ class DbMiddleware(BaseMiddleware):
         for message in set(useless_messages):
             if message is not None:
                 await dp.bot.delete_message(chat_id=msg.chat.id, message_id=message, for_cache=True)
+                logging.info(f'DELETED MESSAGE {message} FROM {msg.from_user.username} CHAT')
 
     async def add_useless_messages_with_state(self, msg: Message) -> None:
         """This method add user's messages into cache with key - :useless_messages"""
@@ -39,6 +42,7 @@ class DbMiddleware(BaseMiddleware):
             data_messages = []
             data_messages.append(msg.message_id)
             await redis_cache.set(msg.from_user.username + ':useless_messages', json.dumps(data_messages))
+        logging.info(f'USER {msg.from_user.username} CHAT MESSAGE {msg.message_id} ADDED INTO CACHE')
 
     async def on_process_message(self, msg: Message, data: dict) -> None:
         if msg.text is not None and data['raw_state'] is None:
