@@ -78,6 +78,7 @@ class CustomBotClient(Bot):
     async def send_message(self,
                            chat_id: typing.Union[base.Integer, base.String],
                            text: base.String,
+                           in_cache: bool = True,
                            parse_mode: typing.Optional[base.String] = None,
                            entities: typing.Optional[typing.List[types.MessageEntity]] = None,
                            disable_web_page_preview: typing.Optional[base.Boolean] = None,
@@ -106,10 +107,11 @@ class CustomBotClient(Bot):
         message = types.Message(**result)
 
         # Add into cache bot's messages
-        username = (await self.get_chat(chat_id=chat_id)).username
-        useless_messages = await self.get_cache(username=username, cache_key=':useless_messages')
-        useless_messages.append(message.message_id)
-        await self.set_cache(username=username, cache_key=':useless_messages', cache=useless_messages)
-        logging.info(f'ADDED MESSAGE(SIMPLE MESSAGE) {message.message_id} INTO {username} CACHE')
+        if in_cache:
+            username = (await self.get_chat(chat_id=chat_id)).username
+            useless_messages = await self.get_cache(username=username, cache_key=':useless_messages')
+            useless_messages.append(message.message_id)
+            await self.set_cache(username=username, cache_key=':useless_messages', cache=useless_messages)
+            logging.info(f'ADDED MESSAGE(SIMPLE MESSAGE) {message.message_id} INTO {username} CACHE')
 
         return message

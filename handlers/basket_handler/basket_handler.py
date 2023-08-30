@@ -4,13 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from actions import product_actions, basket_actions, user_actions
 from handlers.product_handler.tools.page_switching import Pages
 from handlers.product_handler.tools.services import Service
-from keyboards.inline_keyboard import InlineKeyboard, callback_data_add_to_basket_or_delete
+from keyboards import inline_keyboard, callback_data_add_to_basket_or_delete
 from loader import dp
 
 CACHE_KEY = ':basket'
 
 
-@dp.message_handler(commands=['basket'])
+@dp.message_handler(text=inline_keyboard.emoji_commands['basket_command'], content_types=['text'])
 async def show_user_basket(message: types.Message, session: AsyncSession) -> None:
     user = await user_actions.get_user_by_username(username=message.from_user.username, session=session)
     user_basket_products = await basket_actions.get_user_basket(user_id=user.user_id, session=session)
@@ -19,7 +19,7 @@ async def show_user_basket(message: types.Message, session: AsyncSession) -> Non
         await message.answer('Ваша корзина пуста')
         return
 
-    markup_switcher = await InlineKeyboard.generate_switcher_reply_markup(
+    markup_switcher = await inline_keyboard.generate_switcher_reply_markup(
         current_page=1,
         pages=len(user_basket_products),
         callback_data=('basket_left', 'basket_right')
@@ -27,7 +27,7 @@ async def show_user_basket(message: types.Message, session: AsyncSession) -> Non
 
     json_data = await Service.show_products(
         all_products=user_basket_products, message=message, reply_markup_switcher=markup_switcher,
-        delete_or_add=InlineKeyboard.delete_from_basket
+        delete_or_add=inline_keyboard.delete_from_basket
     )
 
     await dp.bot.set_cache(username=message.from_user.username, cache_key=CACHE_KEY, cache=json_data)
@@ -50,7 +50,7 @@ async def basket_left(call: types.CallbackQuery) -> None:
     current_page, pages = call.message.reply_markup.inline_keyboard[0][1].text.split('/')
     products_previous_page, cache = await Pages.get_previous_page(
         cache=await dp.bot.get_cache(username=call.from_user.username, cache_key=CACHE_KEY),
-        delete_or_add=InlineKeyboard.delete_from_basket
+        delete_or_add=inline_keyboard.delete_from_basket
     )
 
     cache = await Service.object_left(
@@ -71,7 +71,7 @@ async def basket_right(call: types.CallbackQuery) -> None:
     current_page, pages = call.message.reply_markup.inline_keyboard[0][1].text.split('/')
     products_next_page, cache = await Pages.get_next_page(
         cache=await dp.bot.get_cache(username=call.from_user.username, cache_key=CACHE_KEY),
-        delete_or_add=InlineKeyboard.delete_from_basket
+        delete_or_add=inline_keyboard.delete_from_basket
     )
 
     cache = await Service.object_right(

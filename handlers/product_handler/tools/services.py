@@ -4,7 +4,7 @@ from aiogram import types, Dispatcher
 from aiogram.types import InlineKeyboardMarkup
 
 from handlers.product_handler.tools.page_switching import Pages
-from keyboards.inline_keyboard import InlineKeyboard
+from keyboards import inline_keyboard
 
 
 class Service:
@@ -61,7 +61,7 @@ class Service:
                                 object: str) -> dict:
         """ Edits the page switching keyboard. Changes the number of the current page """
         tab_message = await call.message.edit_reply_markup(
-            await InlineKeyboard.generate_switcher_reply_markup(
+            await inline_keyboard.generate_switcher_reply_markup(
                 current_page=current_page,
                 pages=pages,
                 callback_data=(f'{object}_left', f'{object}_right')
@@ -79,7 +79,7 @@ class Service:
         tab_message = await dp.bot.send_message(
             chat_id=call.message.chat.id,
             text='Переключалка',
-            reply_markup=await InlineKeyboard.generate_switcher_reply_markup(
+            reply_markup=await inline_keyboard.generate_switcher_reply_markup(
                 current_page=current_page,
                 pages=pages,
                 callback_data=(f'{object}_left', f'{object}_right')
@@ -104,7 +104,7 @@ class Service:
             photo=open(f"{product['image_path']}", 'rb'),
             caption=caption,
             parse_mode='HTML',
-            reply_markup=await InlineKeyboard.generate_add_to_basket_or_delete_reply_markup(
+            reply_markup=await inline_keyboard.generate_add_to_basket_or_delete_reply_markup(
                 product_id=product['product_id'], delete_or_add=delete_or_add)
         )
         json_data['messages'].append(product_message.message_id)
