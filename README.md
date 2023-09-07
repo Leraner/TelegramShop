@@ -1,4 +1,4 @@
-# Pet-porject
+# Pet-project
 
 ### Телеграм бот магазин
 
