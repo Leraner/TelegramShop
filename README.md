@@ -30,4 +30,5 @@ python app.py
 * ElasticSearch
 * Kibana
 * Sentry
+* Alembic
 
